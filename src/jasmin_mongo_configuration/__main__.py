@@ -1,0 +1,3 @@
+from .configurationstreamer import *
+
+startFromConsole()

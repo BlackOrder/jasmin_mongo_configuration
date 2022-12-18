@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jasmin_mongo_configuration"
-version = "0.0.0.dev1"
+version = "0.0.3"
 authors = [
   { name="BlackOrder", email="4302157+BlackOrder@users.noreply.github.com" },
 ]
-description = "Links [Jasmin SMS Gateway](https://github.com/jookies/jasmin) to MongoDB cluster stream (can be one node)."
+description = "Links Jasmin SMS Gateway to MongoDB cluster stream (can be one node)."
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
@@ -16,10 +16,10 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
-dependencies = [ "jasmin-telnet", "twisted", "txamqp", "smpp.pdu3", "pymongo", "dnspython" ]
+dependencies = [ "jasmin-telnet", "pymongo", "dnspython" ]
 
 [project.scripts]
-jasminrealtimed = "jasmin_mongo_configuration.console:start"
+jasminmongoconfd = "jasmin_mongo_configuration.configurationstreamer:startFromConsole"
 
 [project.urls]
 "Homepage" = "https://github.com/BlackOrder/jasmin_mongo_configuration"
