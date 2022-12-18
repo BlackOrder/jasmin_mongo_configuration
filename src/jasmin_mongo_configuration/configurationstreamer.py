@@ -2,29 +2,30 @@ import os
 from .mongodb import MongoDB
 import logging
 
+
 class ConfigurationStreamer:
     def __init__(
-            self, 
-            mongo_connection_string: str, 
-            configuration_database: str, 
-            sync_current_first:bool=True, 
-            jasmin_cli_host: str = "127.0.0.1", 
-            jasmin_cli_port: int = 8990, 
-            jasmin_cli_timeout: int = 30, 
-            jasmin_cli_auth: bool = True, 
-            jasmin_cli_username: str = "jcliadmin", 
-            jasmin_cli_password: str = "jclipwd", 
-            jasmin_cli_standard_prompt: str = "jcli : ", 
-            jasmin_cli_interactive_prompt: str = "> ", 
-            logPath: str = "/var/log"
-        ):
-        
+        self,
+        mongo_connection_string: str,
+        configuration_database: str,
+        sync_current_first: bool = True,
+        jasmin_cli_host: str = "127.0.0.1",
+        jasmin_cli_port: int = 8990,
+        jasmin_cli_timeout: int = 30,
+        jasmin_cli_auth: bool = True,
+        jasmin_cli_username: str = "jcliadmin",
+        jasmin_cli_password: str = "jclipwd",
+        jasmin_cli_standard_prompt: str = "jcli : ",
+        jasmin_cli_interactive_prompt: str = "> ",
+        logPath: str = "/var/log"
+    ):
+
         self.MONGODB_CONNECTION_STRING = mongo_connection_string
-        
+
         self.MONGODB_MODULES_DATABASE = configuration_database
 
         self.SYNC_CURRENT_FIRST = sync_current_first
-        
+
         self.telnet_config: dict = {
             "host": jasmin_cli_host,
             "port": jasmin_cli_port,
@@ -35,7 +36,7 @@ class ConfigurationStreamer:
             "standard_prompt": jasmin_cli_standard_prompt,
             "interactive_prompt": jasmin_cli_interactive_prompt
         }
-        
+
         logFormatter = logging.Formatter(
             "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
         rootLogger = logging.getLogger()
@@ -52,13 +53,12 @@ class ConfigurationStreamer:
         fileHandler.setFormatter(logFormatter)
         rootLogger.addHandler(fileHandler)
 
-
     def startStream(self):
 
         logging.info("*********************************************")
         logging.info("::Jasmin MongoDB Configuration::")
         logging.info("")
-        
+
         mongosource = MongoDB(connection_string=self.MONGODB_CONNECTION_STRING,
                               database_name=self.MONGODB_MODULES_DATABASE)
         if mongosource.startConnection() is True:
@@ -85,17 +85,21 @@ def startFromConsole():
             JASMIN_MONGO_CONFIGURATION_LOG_PATH     =         /var/log      ")
 
     configurationStreamer = ConfigurationStreamer(
-        mongo_connection_string=os.getenv("MONGODB_CONNECTION_STRING"), 
+        mongo_connection_string=os.getenv("MONGODB_CONNECTION_STRING"),
         configuration_database=os.getenv("MONGODB_MODULES_DATABASE"),
-        sync_current_first=bool(os.getenv("SYNC_CURRENT_FIRST", 'True').lower() in ['true', 'y', 'yes', '1']),
+        sync_current_first=bool(os.getenv("SYNC_CURRENT_FIRST", 'True').lower() in [
+                                'true', 'y', 'yes', '1']),
         jasmin_cli_host=os.getenv("JASMIN_CLI_HOST"),
         jasmin_cli_port=int(os.getenv("JASMIN_CLI_PORT", "8990")),
         jasmin_cli_timeout=int(os.getenv("JASMIN_CLI_TIMEOUT", "30")),
-        jasmin_cli_auth=bool(os.getenv("JASMIN_CLI_AUTH", 'True').lower() in ['true', 'y', 'yes', '1']),
+        jasmin_cli_auth=bool(os.getenv("JASMIN_CLI_AUTH", 'True').lower() in [
+                             'true', 'y', 'yes', '1']),
         jasmin_cli_username=os.getenv("JASMIN_CLI_USERNAME", "jcliadmin"),
         jasmin_cli_password=os.getenv("JASMIN_CLI_PASSWORD", "jclipwd"),
-        jasmin_cli_standard_prompt=os.getenv("JASMIN_CLI_STANDARD_PROMPT", "jcli : "),
-        jasmin_cli_interactive_prompt=os.getenv("JASMIN_CLI_INTERACTIVE_PROMPT", "> "),
+        jasmin_cli_standard_prompt=os.getenv(
+            "JASMIN_CLI_STANDARD_PROMPT", "jcli : "),
+        jasmin_cli_interactive_prompt=os.getenv(
+            "JASMIN_CLI_INTERACTIVE_PROMPT", "> "),
         logPath=os.getenv("JASMIN_MONGO_CONFIGURATION_LOG_PATH", "/var/log")
     )
 
