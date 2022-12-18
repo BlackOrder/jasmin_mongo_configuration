@@ -49,6 +49,9 @@ cp .env.example .env
 Edit the `.env` file. change the default username and password.
 
 #### Create cluster key:
+Mongo nodes need to share the same key to be able to authenticate each-other
+
+
 ##### One line:
 ```
 echo "MONGODB_CLUSTER_KEY="$(openssl rand -base64 756 | sed -z 's/\n/\\n/g') >> .env
