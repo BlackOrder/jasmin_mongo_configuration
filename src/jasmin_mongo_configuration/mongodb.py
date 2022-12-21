@@ -11,7 +11,7 @@ class MongoDB:
         """ Constructor """
         self.connection_string = connection_string
         self.database_name = database_name
-        logging.info("Starting ::MongoDB cluster connection::")
+        logging.info("Starting MongoDB cluster's connection")
 
     def logger_callback(self, msg: str):
         logging.info(msg=msg)
@@ -96,14 +96,20 @@ class MongoDB:
         self.syncCurrentFirst = syncCurrentFirst
         try:
             with self.database.watch(full_document='updateLookup') as stream:
-                logging.info("Starting ::MongoDB cluster stream::")
-                logging.info("")
 
                 if self.syncCurrentFirst is True:
                     # Sync current data to Jasmin before waiting for changes
-                    logging.info("SYNC_CURRENT_FIRST is set to True")
+                    logging.info("Sync current configuration first is ENABLED")
                     self.pullAllConfigurations(telnet_config=telnet_config)
+                    logging.info("")
+                else:
+                    logging.info("Sync current configuration first is DISABLED")
+                    logging.info("Skipping synchronizing current configurations")
+                    logging.info("")
 
+
+                logging.info("Starting MongoDB cluster's Change Stream")
+                logging.info("")
                 for change in stream:
                     module = change["ns"]["coll"]
                     sub_id = change["documentKey"]["_id"]

@@ -1,0 +1,26 @@
+version: "3"
+name: jasmin-mongo
+services:
+  configuration:
+    build: .
+    image: jasmin-mongo-configuration
+    restart: always
+    networks:
+      - mongo_cluster_subnet
+    environment:
+      JASMIN_CLI_HOST: ${JASMIN_CLI_HOST:-jasmin}
+      JASMIN_CLI_PORT: ${JASMIN_CLI_PORT:-8990}
+      JASMIN_CLI_TIMEOUT: ${JASMIN_CLI_TIMEOUT:-30}
+      JASMIN_CLI_AUTH: ${JASMIN_CLI_AUTH:-True}
+      JASMIN_CLI_USERNAME: ${JASMIN_CLI_USERNAME:-jcliadmin}
+      JASMIN_CLI_PASSWORD: ${JASMIN_CLI_PASSWORD:-jclipwd}
+      JASMIN_CLI_STANDARD_PROMPT: ${JASMIN_CLI_STANDARD_PROMPT}
+      JASMIN_CLI_INTERACTIVE_PROMPT: ${JASMIN_CLI_INTERACTIVE_PROMPT}
+      MONGODB_CONNECTION_STRING: mongodb://${MONGODB_USERNAME:?err}:${MONGODB_PASSWORD:?err}@${MONGODB_CLUSTER_HOSTS:?err}/?authSource=admin&replicaSet=rs
+      MONGODB_MODULES_DATABASE: ${MONGODB_MODULES_DATABASE:-configs}
+      SYNC_CURRENT_FIRST: ${SYNC_CURRENT_FIRST:-True}
+      JASMIN_MONGO_CONFIGURATION_LOG_PATH: ${JASMIN_MONGO_CONFIGURATION_LOG_PATH:-/var/log}
+
+networks:
+  mongo_cluster_subnet:
+    external: true

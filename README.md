@@ -1,25 +1,17 @@
 # Jasmin Mongo Configuration
 
-Links [Jasmin SMS Gateway](https://github.com/jookies/jasmin)'s configuration to MongoDB cluster stream (can be a one-node cluster). This package is using MongoDB cluster [Change Stream](https://www.mongodb.com/docs/manual/changeStreams/) which allow applications to access real-time data changes.
+Links [Jasmin SMS Gateway](https://github.com/jookies/jasmin)'s configuration to MongoDB cluster's [Change Stream](https://www.mongodb.com/docs/manual/changeStreams/) (can be a one-node cluster). This package is using MongoDB cluster's [Change Stream](https://www.mongodb.com/docs/manual/changeStreams/) which allow applications to access realtime data changes.
 
 
 ### Table of Contents
 1. **[Installation Instructions](#installation-instructions)**<br>
     + **[PYPI](#pypi)**<br>
     + **[From Source](#from-source)**<br>
-2. **[Setup MongoDB CLuster](#setup-mongodb-cluster)**<br>
     + **[Docker](#docker)**<br>
-        * **[Prepare network](#prepare-network)**<br>
-        * **[Prepare variables](#prepare-variables)**<br>
-        * **[Create cluster key](#create-cluster-key)**<br>
-            1. **[One line](#one-line)**<br>
-            2. **[Manually](#manually)**<br>
-        * **[Start MongoDB cluster service](#start-mongodb-cluster-service)**<br>
+2. **[Setup MongoDB CLuster](#setup-mongodb-cluster)**<br>
 3. **[Usage Instructions](#usage-instructions)**<br>
     + **[Data Structure](#data-structure)**<br>
     + **[Start the Service](#start-the-service)**<br>
-        * **[Set variables](#set-variables)**<br>
-        * **[Start Change Stream](#start-change-stream)**<br>
 
 
 ## Installation Instructions
@@ -33,58 +25,18 @@ git clone https://github.com/BlackOrder/jasmin_mongo_configuration.git
 cd jasmin_mongo_configuration
 pip3 install .
 ```
+### Docker:
+```
+docker compose -f ./docker/docker-compose.yml up -d
+```
+Be sure to change the `JASMIN_HOST` and `MONGO_HOST` in the `docker-compose.yml` file to your desired values. and also finish the setup of the MongoDB cluster and import all of your configurations into a MongoDB database before running the docker-compose file.
 
 ## Setup MongoDB CLuster
-### Docker
-#### Prepare network:
-```
-docker network create mongo_cluster_subnet
-```
-
-#### Prepare variables:
-```
-cd docker
-cp .env.example .env
-```
-Edit the `.env` file. change the default username and password.
-
-#### Create cluster key:
-Mongo nodes need to share the same key to be able to authenticate each-other
-
-
-##### One line:
-```
-echo "MONGODB_CLUSTER_KEY="$(openssl rand -base64 756 | sed -z 's/\n/\\n/g') >> .env
-```
-if the above failes to create the env variable in `.env` file, you have to do it in multiple steps.
-
-
-##### Manually
-1. Create key file:
-```
-openssl rand -base64 756 > mongo_cluster_key
-```
-
-2. Edit Key:
-```
-vim ./mongo_cluster_key
-```
-replace all new-line with `\n`
-
-3. Step 3:
-Create a variable in `.env` file and use the string from `Step 2` as it's value
-```
-MONGODB_CLUSTER_KEY=####-Single line encrypted key-####
-```
-
-#### Start MongoDB cluster service:
-```
-docker compose -f docker-compose.MongoCluster.yml up -d
-```
+To setup a MongoDB cluster with Docker, You can use this open source [Docker Custom MongoDB Image](https://github.com/BlackOrder/mongo-cluster)
 
 
 ## Usage Instructions:
-`Jasmin Mongo Configuration` sync all configurations [`Smppccm`, `Httpccm`, `Group`, `User`, `Filter`, `MoRouter`, `MtRouter`, `MoInterceptor`, and `MtInterceptor`] from a MongoDB cluster to a `jasmin` instance. All settings are read from OS ENV when run from console. if you want to import it in you code, you can supply the settings on initialization.
+`Jasmin Mongo Configuration` sync all configurations [`Smppccm`, `Httpccm`, `Group`, `User`, `Filter`, `MoRouter`, `MtRouter`, `MoInterceptor`, and `MtInterceptor`] from a MongoDB cluster to a `jasmin` instance. All settings can be read from OS ENV when run from console or passed as arguments. if you want to import it in you code, you can supply the settings on initialization.
 
 ### Data Structure
 The Database supplied should have a collection for each module:
@@ -153,23 +105,37 @@ You will have to make the sure `jasmin` have access to `/tmp/premium.py` before 
 
 
 ### Start the service
-#### Set variables
-To start the package. you have to export the fallowing variables:
+There is multiple ways to setup the package from CLI.
+
+1. Set ENV variables
+you can export the fallowing variables before execution
 ```
 JASMIN_CLI_HOST                         =       **REQUIRED:NoDefault**
 JASMIN_CLI_PORT                         =               8990
 JASMIN_CLI_TIMEOUT                      =                30
-JASMIN_CLI_AUTH                         =               True
+JASMIN_CLI_AUTH                         =                yes
 JASMIN_CLI_USERNAME                     =             jcliadmin
 JASMIN_CLI_PASSWORD                     =              jclipwd
 JASMIN_CLI_STANDARD_PROMPT              =             "jcli : "
 JASMIN_CLI_INTERACTIVE_PROMPT           =               "> "
-MONGODB_CONNECTION_STRING               =       **REQUIRED:NoDefault**
-MONGODB_MODULES_DATABASE                =       **REQUIRED:NoDefault**
-SYNC_CURRENT_FIRST                      =               True
-JASMIN_MONGO_CONFIGURATION_LOG_PATH     =             /var/log
+MONGO_CONNECTION_STRING                 =       **REQUIRED:NoDefault**
+MONGO_CONFIGURATION_DATABASE            =       **REQUIRED:NoDefault**
+SYNC_CURRENT_FIRST                      =                yes
+JASMIN_MONGO_CONFIGURATION_LOG_PATH     =          /var/log/jasmin/
 ```
-#### Start Change-Stream
+
+
+Then execute:
 ```
 jasminmongoconfd
+```
+
+2. you can pass arguments to the package on execution. execute ` jasminmongoconfd -h ` to see all possible arguments. Then execute:
+```
+jasminmongoconfd --cli-host $JASMIN_CLI_HOST --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
+```
+
+3. Mix the previous two methods. you can set the ENV variables and pass some arguments. for example:
+```
+JASMIN_CLI_HOST=127.0.0.1 jasminmongoconfd --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
 ```

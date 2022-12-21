@@ -1,3 +1,3 @@
 from .configurationstreamer import *
 
-startFromConsole()
+startFromCLI()

@@ -2,27 +2,41 @@ import os
 from .mongodb import MongoDB
 import logging
 
+NODEFAULT: str = "REQUIRED: NO_DEFAULT"
+DEFAULT_SYNC_CURRENT_FIRST: bool = True
+DEFAULT_JASMIN_CLI_HOST: str = '127.0.0.1'
+DEFAULT_JASMIN_CLI_PORT: int = 8990
+DEFAULT_JASMIN_CLI_TIMEOUT: int = 30
+DEFAULT_JASMIN_CLI_AUTH: bool = True
+DEFAULT_JASMIN_CLI_USERNAME: str = "jcliadmin"
+DEFAULT_JASMIN_CLI_PASSWORD: str = "jclipwd"
+DEFAULT_JASMIN_CLI_STANDARD_PROMPT: str = "jcli : "
+DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT: str = "> "
+DEFAULT_LOG_PATH: str = "/var/log/jasmin/"
+DEFAULT_LOG_LEVEL: str = "INFO"
+
 
 class ConfigurationStreamer:
     def __init__(
         self,
         mongo_connection_string: str,
         configuration_database: str,
-        sync_current_first: bool = True,
-        jasmin_cli_host: str = "127.0.0.1",
-        jasmin_cli_port: int = 8990,
-        jasmin_cli_timeout: int = 30,
-        jasmin_cli_auth: bool = True,
-        jasmin_cli_username: str = "jcliadmin",
-        jasmin_cli_password: str = "jclipwd",
-        jasmin_cli_standard_prompt: str = "jcli : ",
-        jasmin_cli_interactive_prompt: str = "> ",
-        logPath: str = "/var/log"
+        sync_current_first: bool = DEFAULT_SYNC_CURRENT_FIRST,
+        jasmin_cli_host: str = DEFAULT_JASMIN_CLI_HOST,
+        jasmin_cli_port: int = DEFAULT_JASMIN_CLI_PORT,
+        jasmin_cli_timeout: int = DEFAULT_JASMIN_CLI_TIMEOUT,
+        jasmin_cli_auth: bool = DEFAULT_JASMIN_CLI_AUTH,
+        jasmin_cli_username: str = DEFAULT_JASMIN_CLI_USERNAME,
+        jasmin_cli_password: str = DEFAULT_JASMIN_CLI_PASSWORD,
+        jasmin_cli_standard_prompt: str = DEFAULT_JASMIN_CLI_STANDARD_PROMPT,
+        jasmin_cli_interactive_prompt: str = DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT,
+        logPath: str = DEFAULT_LOG_PATH,
+        logLevel: str = DEFAULT_LOG_LEVEL
     ):
 
-        self.MONGODB_CONNECTION_STRING = mongo_connection_string
+        self.MONGO_CONNECTION_STRING = mongo_connection_string
 
-        self.MONGODB_MODULES_DATABASE = configuration_database
+        self.MONGO_CONFIGURATION_DATABASE = configuration_database
 
         self.SYNC_CURRENT_FIRST = sync_current_first
 
@@ -40,67 +54,107 @@ class ConfigurationStreamer:
         logFormatter = logging.Formatter(
             "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
         rootLogger = logging.getLogger()
-        rootLogger.setLevel(logging.DEBUG)
+        rootLogger.setLevel(logLevel)
 
         consoleHandler = logging.StreamHandler()
-        consoleHandler.setLevel(logging.INFO)
+        consoleHandler.setLevel(logLevel)
         consoleHandler.setFormatter(logFormatter)
         rootLogger.addHandler(consoleHandler)
 
+        if not os.path.exists(logPath):
+            os.makedirs(logPath)
+
         fileHandler = logging.FileHandler(
             f"{logPath.rstrip('/')}/jasmin_mongo_configuration.log")
-        fileHandler.setLevel(logging.DEBUG)
+        fileHandler.setLevel(logLevel)
         fileHandler.setFormatter(logFormatter)
         rootLogger.addHandler(fileHandler)
 
-    def startStream(self):
+    def start(self):
 
         logging.info("*********************************************")
         logging.info("::Jasmin MongoDB Configuration::")
         logging.info("")
 
-        mongosource = MongoDB(connection_string=self.MONGODB_CONNECTION_STRING,
-                              database_name=self.MONGODB_MODULES_DATABASE)
+        mongosource = MongoDB(connection_string=self.MONGO_CONNECTION_STRING,
+                              database_name=self.MONGO_CONFIGURATION_DATABASE)
         if mongosource.startConnection() is True:
             mongosource.stream(
                 telnet_config=self.telnet_config, syncCurrentFirst=self.SYNC_CURRENT_FIRST)
 
 
-def startFromConsole():
-    if os.getenv("JASMIN_CLI_HOST") is None or os.getenv("MONGODB_CONNECTION_STRING") is None or os.getenv("MONGODB_MODULES_DATABASE") is None:
-        logging.info(
-            "Sorry, Could not find correct ENVIRONMENT variables!")
-        logging.info("Please export the fallowing:                          \n\
-            JASMIN_CLI_HOST                         =       **NoDefault**   \n\
-            JASMIN_CLI_PORT                         =           8990        \n\
-            JASMIN_CLI_TIMEOUT                      =           30          \n\
-            JASMIN_CLI_AUTH                         =           True        \n\
-            JASMIN_CLI_USERNAME                     =         jcliadmin     \n\
-            JASMIN_CLI_PASSWORD                     =         jclipwd       \n\
-            JASMIN_CLI_STANDARD_PROMPT              =         \"jcli : \"   \n\
-            JASMIN_CLI_INTERACTIVE_PROMPT           =           \"> \"      \n\
-            MONGODB_CONNECTION_STRING               =       **NoDefault**   \n\
-            MONGODB_MODULES_DATABASE                =       **NoDefault**   \n\
-            SYNC_CURRENT_FIRST                      =           True        \n\
-            JASMIN_MONGO_CONFIGURATION_LOG_PATH     =         /var/log      ")
+def startFromCLI():
+    import argparse
+    parser = argparse.ArgumentParser(
+        description=f"Jasmin MongoDB Configuration, Links Jasmin SMS Gateway to MongoDB cluster's Change Stream (can be one node).")
+    
+    parser.add_argument('--connection-string', '-c', type=str, dest='mongo_connection_string',
+        help='MongoDB Connection String, No default. ex. mongodb://mongoroot:mongopass@mongodb1:27017,mongodb2:27017,mongodb3:27017/?authSource=admin&replicaSet=rs',
+        required=os.getenv("MONGO_CONNECTION_STRING") is None,
+        default=os.getenv("MONGO_CONNECTION_STRING"))
+    
+    parser.add_argument('--configuration-database', '-db', type=str, dest='configuration_database',
+        help='Configuration Database, No default. MongoDB database name where you have saved the jasmin configurations',
+        required=os.getenv("MONGO_CONFIGURATION_DATABASE") is None,
+        default=os.getenv("MONGO_CONFIGURATION_DATABASE"))
+    
+    parser.add_argument('--sync-current-first', '-sync', type=bool, dest='sync_current_first',
+        help='Sync current configuration first, Enabled by default. if enabled, will sync the current configurations first before monitoring for any changes',
+        choices=['yes', 'y', 'no', 'n'],
+        required=False,
+        default=bool(os.getenv("SYNC_CURRENT_FIRST", 'yes' if DEFAULT_SYNC_CURRENT_FIRST else 'no').lower() in ['yes', 'y']))
+    
+    parser.add_argument('--cli-host', '-H', type=str, dest='jasmin_cli_host',
+        help='Jasmin CLI Host, Default: "127.0.0.1". The hostname of the jasmin server',
+        required=False,
+        default=os.getenv("JASMIN_CLI_HOST", DEFAULT_JASMIN_CLI_HOST))
+    
+    parser.add_argument('--cli-port', '-P', type=int, dest='jasmin_cli_port',
+        help='Jasmin CLI Port, Default: "8990". The port of the jasmin server cli',
+        required=False,
+        default=int(os.getenv("JASMIN_CLI_PORT", DEFAULT_JASMIN_CLI_PORT)))
+    
+    parser.add_argument('--cli-timeout', '-t', type=int, dest='jasmin_cli_timeout',
+        help='Jasmin CLI Timeout, Default: "30". The timeout for the CLI connection. Should be increased if your network is not stable.',
+        required=False,
+        default=int(os.getenv("JASMIN_CLI_TIMEOUT", DEFAULT_JASMIN_CLI_TIMEOUT)))
+    
+    parser.add_argument('--cli-auth', '-a', type=bool, dest='jasmin_cli_auth',
+        help='Jasmin CLI Auth, Enabled by default. if enabled, will use authentication for the telnet connection.',
+        choices=['yes', 'y', 'no', 'n'],
+        required=False,
+        default=bool(os.getenv("JASMIN_CLI_AUTH", 'yes' if DEFAULT_JASMIN_CLI_AUTH else 'no').lower() in ['yes', 'y']))
+    
+    parser.add_argument('--cli-username', '-u', type=str, dest='jasmin_cli_username',
+        help='Jasmin CLI Username, Default: "jcliadmin". The jasmin telnet cli username',
+        required=False,
+        default=os.getenv("JASMIN_CLI_USERNAME", DEFAULT_JASMIN_CLI_USERNAME))
+    
+    parser.add_argument('--cli-password', '-p', type=str, dest='jasmin_cli_password',
+        help='Jasmin CLI Password, Default: "jclipwd". The jasmin telnet cli password',
+        required=False,
+        default=os.getenv("JASMIN_CLI_PASSWORD", DEFAULT_JASMIN_CLI_PASSWORD))
+    
+    parser.add_argument('--cli-standard-prompt', type=str, dest='jasmin_cli_standard_prompt',
+        help='Jasmin CLI Standard Prompt, Default: "jcli : ". There shouldn\'t be a need to change this.',
+        required=False,
+        default=os.getenv("JASMIN_CLI_STANDARD_PROMPT", DEFAULT_JASMIN_CLI_STANDARD_PROMPT))
+    
+    parser.add_argument('--cli-interactive-prompt', type=str, dest='jasmin_cli_interactive_prompt',
+        help='Jasmin CLI Interactive Prompt, Default: "> ". There shouldn\'t be a need to change this.',
+        required=False,
+        default=os.getenv("JASMIN_CLI_INTERACTIVE_PROMPT", DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT))
+    
+    parser.add_argument('--log-path', type=str, dest='logPath',
+        help='Log Path, Default: "/var/log/jasmin/"',
+        required=False,
+        default=os.getenv("JASMIN_MONGO_CONFIGURATION_LOG_PATH", DEFAULT_LOG_PATH))
+    
+    parser.add_argument('--log-level', type=str, dest='logLevel',
+        help='Log Level, Default: "INFO"',
+        required=False,
+        default=os.getenv("JASMIN_MONGO_CONFIGURATION_LOG_LEVEL", DEFAULT_LOG_LEVEL))
 
-    configurationStreamer = ConfigurationStreamer(
-        mongo_connection_string=os.getenv("MONGODB_CONNECTION_STRING"),
-        configuration_database=os.getenv("MONGODB_MODULES_DATABASE"),
-        sync_current_first=bool(os.getenv("SYNC_CURRENT_FIRST", 'True').lower() in [
-                                'true', 'y', 'yes', '1']),
-        jasmin_cli_host=os.getenv("JASMIN_CLI_HOST"),
-        jasmin_cli_port=int(os.getenv("JASMIN_CLI_PORT", "8990")),
-        jasmin_cli_timeout=int(os.getenv("JASMIN_CLI_TIMEOUT", "30")),
-        jasmin_cli_auth=bool(os.getenv("JASMIN_CLI_AUTH", 'True').lower() in [
-                             'true', 'y', 'yes', '1']),
-        jasmin_cli_username=os.getenv("JASMIN_CLI_USERNAME", "jcliadmin"),
-        jasmin_cli_password=os.getenv("JASMIN_CLI_PASSWORD", "jclipwd"),
-        jasmin_cli_standard_prompt=os.getenv(
-            "JASMIN_CLI_STANDARD_PROMPT", "jcli : "),
-        jasmin_cli_interactive_prompt=os.getenv(
-            "JASMIN_CLI_INTERACTIVE_PROMPT", "> "),
-        logPath=os.getenv("JASMIN_MONGO_CONFIGURATION_LOG_PATH", "/var/log")
-    )
+    configurationstreamer = ConfigurationStreamer(**vars(parser.parse_args()))
 
-    configurationStreamer.startStream()
+    configurationstreamer.start()
