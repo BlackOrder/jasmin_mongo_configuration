@@ -6,7 +6,7 @@ services:
     image: jasmin-mongo-configuration
     restart: always
     networks:
-      - mongo_cluster_subnet
+      - mongo-cluster_cluster_subnet
     environment:
       JASMIN_CLI_HOST: ${JASMIN_CLI_HOST:-jasmin}
       JASMIN_CLI_PORT: ${JASMIN_CLI_PORT:-8990}
@@ -23,5 +23,5 @@ services:
       JASMIN_MONGO_CONFIGURATION_LOG_LEVEL: ${JASMIN_MONGO_CONFIGURATION_LOG_LEVEL:-INFO}
 
 networks:
-  mongo_cluster_subnet:
+  mongo-cluster_cluster_subnet:
     external: true
