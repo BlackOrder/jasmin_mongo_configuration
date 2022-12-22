@@ -107,7 +107,7 @@ You will have to make the sure `jasmin` have access to `/tmp/premium.py` before 
 ### Start the service
 There is multiple ways to setup the package from CLI.
 
-1. Set ENV variables
+1. By exporting ENV variables
 you can export the fallowing variables before execution
 ```
 JASMIN_CLI_HOST                         =       **REQUIRED:NoDefault**
