@@ -1,0 +1,25 @@
+version: "3"
+name: jasmin-mongo
+services:
+  configuration:
+    image: blackorder/jasmin-mongo-configuration
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    volumes:
+      - root_user:/root:z
+      - ../..:/workspaces:cached
+    networks:
+      - jasmin-core_jasmin_subnet
+      - mongo-cluster_cluster_subnet
+    env_file:
+      - devcontainer.env
+
+volumes:
+  root_user: {}
+  extensions: {}
+  insiders: {}
+
+networks:
+  jasmin-core_jasmin_subnet:
+    external: true
+  mongo-cluster_cluster_subnet:
+    external: true

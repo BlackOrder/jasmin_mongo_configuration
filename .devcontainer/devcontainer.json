@@ -1,0 +1,13 @@
+{
+	"name": "jasmin-mongo-conf-dev",
+	"dockerComposeFile": [
+		"docker-compose.yml"
+	],
+	"service": "configuration",
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+	"postCreateCommand": {
+		"git": "apt-get update; echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/bullseye-backports.list; apt update; apt install -y git/bullseye-backports ssh-client patch less git-man/bullseye-backports",
+		"python-bulid": "python3 -m pip install --upgrade build; python3 -m pip install --upgrade twine",
+		"python-alias": "echo 'alias push=\"python3 -m twine upload -u __token__ -p $$PYPI_TOKEN dist/*\"; alias build=\"python3 -m build\"' > ~/.bashrc"
+	}
+}
