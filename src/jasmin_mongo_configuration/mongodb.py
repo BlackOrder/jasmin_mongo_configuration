@@ -1,8 +1,9 @@
-from pymongo import MongoClient, errors as MongoErrors
-from pymongo.database import Database as MongoDatabase
-from jasmin_telnet.proxy import Proxy as JasminTelnetProxy
-
 import logging
+
+from jasmin_telnet.proxy import Proxy as JasminTelnetProxy
+from pymongo import MongoClient
+from pymongo import errors as MongoErrors
+from pymongo.database import Database as MongoDatabase
 
 
 class MongoDB:
@@ -103,10 +104,11 @@ class MongoDB:
                     self.pullAllConfigurations(telnet_config=telnet_config)
                     logging.info("")
                 else:
-                    logging.info("Sync current configuration first is DISABLED")
-                    logging.info("Skipping synchronizing current configurations")
+                    logging.info(
+                        "Sync current configuration first is DISABLED")
+                    logging.info(
+                        "Skipping synchronizing current configurations")
                     logging.info("")
-
 
                 logging.info("Starting MongoDB cluster's Change Stream")
                 logging.info("")
