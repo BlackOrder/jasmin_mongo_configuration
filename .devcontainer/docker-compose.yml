@@ -1,9 +1,8 @@
 version: "3"
-name: jasmin-mongo
+name: jasmin-mongo-conf
 services:
   configuration:
-    image: blackorder/jasmin-mongo-configuration
-    command: /bin/sh -c "while sleep 1000; do :; done"
+    image: blackorder/dev-python
     volumes:
       - root_user:/root:z
       - ../..:/workspaces:cached
