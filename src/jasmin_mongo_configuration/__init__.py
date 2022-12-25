@@ -1,1 +1,2 @@
-from .configurationstreamer import ConfigurationStreamer as Streamer
+from jasmin_mongo_configuration.configurationstreamer import \
+    ConfigurationStreamer as Streamer

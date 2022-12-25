@@ -1,3 +1,3 @@
-from .configurationstreamer import *
+from jasmin_mongo_configuration.configurationstreamer import *
 
 startFromCLI()

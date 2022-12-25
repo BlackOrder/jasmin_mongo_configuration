@@ -3,7 +3,7 @@ import os
 
 import pkg_resources
 
-from .mongodb import MongoDB
+from jasmin_mongo_configuration.mongodb import MongoDB
 
 NODEFAULT: str = "REQUIRED: NO_DEFAULT"
 DEFAULT_SYNC_CURRENT_FIRST: bool = True
