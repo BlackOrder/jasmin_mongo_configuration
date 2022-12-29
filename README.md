@@ -82,10 +82,10 @@ Each collection should contains your desired `jasmin`'s settings in a key value 
     "mt_messaging_cred authorization validity_period": "True",
     "mt_messaging_cred defaultvalue src_addr": "None",
     "mt_messaging_cred quota balance": 4000,
-    "mt_messaging_cred quota early_percent": "ND",
-    "mt_messaging_cred quota http_throughput": "ND",
-    "mt_messaging_cred quota smpps_throughput": "ND",
-    "mt_messaging_cred quota sms_count": "ND",
+    "mt_messaging_cred quota early_percent": "None",
+    "mt_messaging_cred quota http_throughput": "None",
+    "mt_messaging_cred quota smpps_throughput": "None",
+    "mt_messaging_cred quota sms_count": "None",
     "mt_messaging_cred valuefilter content": ".*",
     "mt_messaging_cred valuefilter dst_addr": ".*",
     "mt_messaging_cred valuefilter priority": "^[0-3]$",
@@ -125,7 +125,7 @@ There is multiple ways to setup the package from CLI.
     you can export the fallowing variables before execution
 
     ```env
-    JASMIN_CLI_HOST                         =       **REQUIRED:NoDefault**
+    JASMIN_JASMIN_HOST                         =       **REQUIRED:NoDefault**
     JASMIN_CLI_PORT                         =               8990
     JASMIN_CLI_TIMEOUT                      =                30
     JASMIN_CLI_AUTH                         =                yes
@@ -148,11 +148,11 @@ There is multiple ways to setup the package from CLI.
 2. you can pass arguments to the package on execution. execute ` jasminmongoconfd -h ` to see all possible arguments. Then execute:
 
     ```bash
-    jasminmongoconfd --cli-host $JASMIN_CLI_HOST --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
+    jasminmongoconfd --cli-host $JASMIN_JASMIN_HOST --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
     ```
 
 3. Mix the previous two methods. you can set the ENV variables and pass some arguments. for example:
 
     ```bash
-    JASMIN_CLI_HOST=127.0.0.1 jasminmongoconfd --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
+    JASMIN_JASMIN_HOST=127.0.0.1 jasminmongoconfd --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
     ```

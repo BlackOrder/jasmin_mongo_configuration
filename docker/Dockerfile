@@ -16,6 +16,10 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN /usr/local/bin/python -m pip install --upgrade pip
 
-RUN pip install jasmin-mongo-configuration
+WORKDIR /build
+
+COPY . .
+
+RUN pip install .
 
 CMD ["jasminmongoconfd"]

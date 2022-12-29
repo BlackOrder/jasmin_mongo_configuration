@@ -5,6 +5,9 @@ from pymongo import MongoClient
 from pymongo import errors as MongoErrors
 from pymongo.database import Database as MongoDatabase
 
+from jasmin_mongo_configuration.interceptorsinstaller import InterceptorsInstaller
+from jasmin_mongo_configuration.defaults import *
+
 
 class MongoDB:
 
@@ -12,6 +15,7 @@ class MongoDB:
         """ Constructor """
         self.connection_string = connection_string
         self.database_name = database_name
+        self.cli_conn: dict = {}
         logging.info("Starting MongoDB cluster's connection")
 
     def logger_callback(self, msg: str):
@@ -23,11 +27,37 @@ class MongoDB:
         if isinstance(server_info, dict) and 'ok' in server_info and server_info['ok'] == 1:
             logging.info("Connected to MongoDB")
             self.mongoclient = mongoclient
+            adminDatabase: MongoDatabase = self.mongoclient['admin']
             database: MongoDatabase = self.mongoclient[self.database_name]
+            adminDatabase_info = adminDatabase.command("buildinfo")
             database_info = database.command("buildinfo")
-            if isinstance(database_info, dict) and 'ok' in database_info and database_info['ok'] == 1:
+            if isinstance(adminDatabase_info, dict) and isinstance(database_info, dict) and \
+                    'ok' in adminDatabase_info and 'ok' in database_info and \
+                    adminDatabase_info['ok'] == 1 and database_info['ok'] == 1:
+                clusterParameter = adminDatabase.command(
+                    {'getClusterParameter': "changeStreamOptions"})
+                preAndPostImagesExpireAfterSeconds = clusterParameter[
+                    'clusterParameters'][0]['preAndPostImages']['expireAfterSeconds']
+                if isinstance(preAndPostImagesExpireAfterSeconds, int) is False or preAndPostImagesExpireAfterSeconds == 0:
+                    logging.info("")
+                    logging.info("Detected Pre and Post Images is not active")
+                    adminDatabase.command({
+                        'setClusterParameter':
+                        {'changeStreamOptions': {
+                            'preAndPostImages': {'expireAfterSeconds': 100}}}
+                    })
+                    logging.info(
+                        "Cluster Parameters changed to support Pre and Post Images for 100 seconds")
+                else:
+                    logging.info("")
+                    logging.info(
+                        f"Cluster Parameters support Pre and Post Images for {preAndPostImagesExpireAfterSeconds} seconds")
+
+                logging.info("")
+
                 logging.info(f"Set to use database: {self.database_name}")
                 logging.info("")
+                self.adminDatabase = adminDatabase
                 self.database = database
                 return True
             else:
@@ -37,6 +67,12 @@ class MongoDB:
         else:
             logging.critical("Failed to connect to MongoDB")
             return False
+
+    def set_bill_managment_state(self, state: bool):
+        self.bill_managment: bool = state
+
+    def get_bill_managment_state(self) -> bool:
+        return hasattr(self, "bill_managment") and isinstance(self.bill_managment, bool) and self.bill_managment is True
 
     def get_one_module(self, module: str) -> dict[str, str | float | bool]:
         "" ""
@@ -65,43 +101,72 @@ class MongoDB:
         self.database[module].update_one(
             {"_id": sub_id}, {'$set': data}, upsert=upsert)
 
-    def pullAllConfigurations(self, telnet_config: dict):
+    def pullAllConfigurations(self):
         "" ""
-        sync_data = {
-            "smppccm": {},
-            "httpccm": {},
-            "group": {},
-            "user": {},
-            "filter": {},
-            "mointerceptor": {},
-            "mtinterceptor": {},
-            "morouter": {},
-            "mtrouter": {},
-        }
+        modules_to_sync = ["smppccm", "httpccm", "group", "user", "filter",
+                           "mointerceptor", "mtinterceptor", "morouter", "mtrouter"]
 
-        for module in sync_data.keys():
+        logging.info(
+            "Synchronizing all configuration to Jasmin from MongoDB cluster. Applies to:")
+        for module in modules_to_sync:
+            sub_data: dict = {}
             cursor = self.database[module].find()
+
             for row in cursor:
+                if self.get_bill_managment_state() is True:
+                    if module in ["mtinterceptor", "mointerceptor"]:
+                        break
+                    elif module == "user":
+                        row["mt_messaging_cred quota balance"] = "None"
+                        row["mt_messaging_cred quota sms_count"] = "None"
+
                 sub_id = row["_id"]
                 del row["_id"]
-                sync_data[module][sub_id] = row
+                sub_data[sub_id] = row
 
-        self.stream_handler(
-            telnet_config=telnet_config,
-            payload={
-                "change_type": "sync",
-                "sync_data": sync_data
-            })
+            self.stream_handler(
+                payload={
+                    "change_type": "sync",
+                    "module": module,
+                    "sub_data": sub_data
+                })
 
-    def stream(self, telnet_config: dict, syncCurrentFirst: bool = False):
-        self.syncCurrentFirst = syncCurrentFirst
+        logging.info("Finished applying configurations")
+
+    def stream(
+        self,
+        jasmin_host: str = DEFAULT_JASMIN_HOST,
+        cli_port: int = DEFAULT_CLI_PORT,
+        cli_timeout: int = DEFAULT_CLI_TIMEOUT,
+        cli_auth: bool = DEFAULT_CLI_AUTH,
+        cli_username: str = DEFAULT_CLI_USERNAME,
+        cli_password: str = DEFAULT_CLI_PASSWORD,
+        cli_standard_prompt: str = DEFAULT_CLI_STANDARD_PROMPT,
+        cli_interactive_prompt: str = DEFAULT_CLI_INTERACTIVE_PROMPT,
+        pb_port: int = DEFAULT_ROUTER_PB_PROXY_PORT,
+        pb_username: str = DEFAULT_ROUTER_PB_PROXY_USERNAME,
+        pb_password: str = DEFAULT_ROUTER_PB_PROXY_PASSWORD,
+        syncCurrentFirst: bool = False
+    ):
+
+        self.cli_conn: dict = {
+            "host": jasmin_host,
+            "port": cli_port,
+            "timeout": cli_timeout,
+            "auth": cli_auth,
+            "username": cli_username,
+            "password": cli_password,
+            "standard_prompt": cli_standard_prompt,
+            "interactive_prompt": cli_interactive_prompt
+        }
+
         try:
             with self.database.watch(full_document='updateLookup') as stream:
 
-                if self.syncCurrentFirst is True:
+                if syncCurrentFirst is True:
                     # Sync current data to Jasmin before waiting for changes
                     logging.info("Sync current configuration first is ENABLED")
-                    self.pullAllConfigurations(telnet_config=telnet_config)
+                    self.pullAllConfigurations()
                     logging.info("")
                 else:
                     logging.info(
@@ -109,6 +174,16 @@ class MongoDB:
                     logging.info(
                         "Skipping synchronizing current configurations")
                     logging.info("")
+
+                if self.get_bill_managment_state() is True:
+                    logging.info("Bill managment Enabled!")
+                    logging.info("Installing billing interceptors")
+                    InterceptorsInstaller(
+                        host=jasmin_host,
+                        port=pb_port,
+                        username=pb_username,
+                        password=pb_password,
+                    )
 
                 logging.info("Starting MongoDB cluster's Change Stream")
                 logging.info("")
@@ -119,7 +194,8 @@ class MongoDB:
                     if change_type == "invalidate":
                         return
                     if change_type in ["create", "drop", "dropDatabase", "rename", "modify"]:
-                        self.pullAllConfigurations(telnet_config=telnet_config)
+                        logging.warn(
+                            "Received a strange structure change. Ignoring stream content!!!!")
                         continue
                     if "updateDescription" in change and module in ["user", "smppccm"]:
                         sub_data = change["updateDescription"]["updatedFields"]
@@ -128,16 +204,34 @@ class MongoDB:
                     else:
                         sub_data = {}
 
+                    if self.get_bill_managment_state() is True:
+                        if module in ["mtinterceptor", "mointerceptor"]:
+                            """Bill managment enabled: skip interceptors"""
+                            return
+                        if module == "user":
+                            if isinstance(sub_data, dict) and "mt_messaging_cred quota balance" in sub_data:
+                                del sub_data["mt_messaging_cred quota balance"]
+                            if isinstance(sub_data, dict) and "mt_messaging_cred quota sms_count" in sub_data:
+                                del sub_data["mt_messaging_cred quota sms_count"]
+
                     if isinstance(sub_data, dict) and "_id" in sub_data:
                         del sub_data["_id"]
 
-                    self.stream_handler(telnet_config=telnet_config,
-                                        payload={
-                                            "module": module,
-                                            "sub_id": sub_id,
-                                            "change_type": change_type,
-                                            "sub_data": sub_data
-                                        })
+                    if not change_type == "delete" and len(sub_data.keys()) < 1:
+                        continue
+
+                    logging.info(
+                        "Recieved notice of change in configurations from MongoDB cluster. Applies to:")
+                    self.stream_handler(
+                        payload={
+                            "module": module,
+                            "sub_id": sub_id,
+                            "change_type": change_type,
+                            "sub_data": sub_data
+                        }
+                    )
+                    logging.info("Finished applying configurations")
+
         except MongoErrors.PyMongoError as err:
             # The ChangeStream encountered an unrecoverable error or the
             # resume attempt failed to recreate the cursor.
@@ -146,32 +240,28 @@ class MongoDB:
         except KeyboardInterrupt:
             pass
 
-    def stream_handler(self, telnet_config: dict, payload):
+    def stream_handler(self, payload):
         """Handle callback for jasmin stream"""
         jasmin_proxy = JasminTelnetProxy(
-            host=telnet_config["host"],
-            port=telnet_config["port"],
-            timeout=telnet_config["timeout"],
-            auth=telnet_config["auth"],
-            username=telnet_config["username"],
-            password=telnet_config["password"],
-            standard_prompt=telnet_config["standard_prompt"],
-            interactive_prompt=telnet_config["interactive_prompt"],
+            host=self.cli_conn.get("host", DEFAULT_JASMIN_HOST),
+            port=self.cli_conn.get("port", DEFAULT_CLI_PORT),
+            timeout=self.cli_conn.get("timeout", DEFAULT_CLI_TIMEOUT),
+            auth=self.cli_conn.get("auth", DEFAULT_CLI_AUTH),
+            username=self.cli_conn.get("username", DEFAULT_CLI_USERNAME),
+            password=self.cli_conn.get("password", DEFAULT_CLI_PASSWORD),
+            standard_prompt=self.cli_conn.get(
+                "standard_prompt", DEFAULT_CLI_STANDARD_PROMPT),
+            interactive_prompt=self.cli_conn.get(
+                "interactive_prompt", DEFAULT_CLI_INTERACTIVE_PROMPT),
             log_status=True,
             logger=self.logger_callback
         )
-        if hasattr(self, "syncCurrentFirst"):
-            if isinstance(self.syncCurrentFirst, bool) and self.syncCurrentFirst is True:
-                logging.info("Synchronizing all configuration to Jasmin")
-                self.syncCurrentFirst = False
-            else:
-                logging.info("Recieved notice of change in configurations")
 
-            logging.info("from MongoDB cluster. Applies to:")
-        if payload["change_type"] == "sync" and "sync_data" in payload:
+        if payload["change_type"] == "sync":
             """ Sync """
-            jasmin_proxy.syncAll(
-                collection_data=payload["sync_data"]
+            jasmin_proxy.sync(
+                module=payload["module"],
+                sub_modules_data=payload["sub_data"]
             )
 
         if payload["change_type"] == "insert":
@@ -196,5 +286,3 @@ class MongoDB:
                 module=payload["module"],
                 sub_id=payload["sub_id"]
             )
-
-        logging.info("Finished applying configurations")

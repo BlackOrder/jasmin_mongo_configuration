@@ -1,22 +1,11 @@
+import argparse
 import logging
 import os
 
 import pkg_resources
 
 from jasmin_mongo_configuration.mongodb import MongoDB
-
-NODEFAULT: str = "REQUIRED: NO_DEFAULT"
-DEFAULT_SYNC_CURRENT_FIRST: bool = True
-DEFAULT_JASMIN_CLI_HOST: str = '127.0.0.1'
-DEFAULT_JASMIN_CLI_PORT: int = 8990
-DEFAULT_JASMIN_CLI_TIMEOUT: int = 30
-DEFAULT_JASMIN_CLI_AUTH: bool = True
-DEFAULT_JASMIN_CLI_USERNAME: str = "jcliadmin"
-DEFAULT_JASMIN_CLI_PASSWORD: str = "jclipwd"
-DEFAULT_JASMIN_CLI_STANDARD_PROMPT: str = "jcli : "
-DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT: str = "> "
-DEFAULT_LOG_PATH: str = "/var/log/jasmin/"
-DEFAULT_LOG_LEVEL: str = "INFO"
+from jasmin_mongo_configuration.defaults import *
 
 
 class ConfigurationStreamer:
@@ -25,34 +14,21 @@ class ConfigurationStreamer:
         mongo_connection_string: str,
         configuration_database: str,
         sync_current_first: bool = DEFAULT_SYNC_CURRENT_FIRST,
-        jasmin_cli_host: str = DEFAULT_JASMIN_CLI_HOST,
-        jasmin_cli_port: int = DEFAULT_JASMIN_CLI_PORT,
-        jasmin_cli_timeout: int = DEFAULT_JASMIN_CLI_TIMEOUT,
-        jasmin_cli_auth: bool = DEFAULT_JASMIN_CLI_AUTH,
-        jasmin_cli_username: str = DEFAULT_JASMIN_CLI_USERNAME,
-        jasmin_cli_password: str = DEFAULT_JASMIN_CLI_PASSWORD,
-        jasmin_cli_standard_prompt: str = DEFAULT_JASMIN_CLI_STANDARD_PROMPT,
-        jasmin_cli_interactive_prompt: str = DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT,
+        bill_managment: bool = DEFAULT_BILL_MANAGMENT,
+        jasmin_host: str = DEFAULT_JASMIN_HOST,
+        cli_port: int = DEFAULT_CLI_PORT,
+        cli_timeout: int = DEFAULT_CLI_TIMEOUT,
+        cli_auth: bool = DEFAULT_CLI_AUTH,
+        cli_username: str = DEFAULT_CLI_USERNAME,
+        cli_password: str = DEFAULT_CLI_PASSWORD,
+        cli_standard_prompt: str = DEFAULT_CLI_STANDARD_PROMPT,
+        cli_interactive_prompt: str = DEFAULT_CLI_INTERACTIVE_PROMPT,
+        pb_port: int = DEFAULT_ROUTER_PB_PROXY_PORT,
+        pb_username: str = DEFAULT_ROUTER_PB_PROXY_USERNAME,
+        pb_password: str = DEFAULT_ROUTER_PB_PROXY_PASSWORD,
         logPath: str = DEFAULT_LOG_PATH,
         logLevel: str = DEFAULT_LOG_LEVEL
     ):
-
-        self.MONGO_CONNECTION_STRING = mongo_connection_string
-
-        self.MONGO_CONFIGURATION_DATABASE = configuration_database
-
-        self.SYNC_CURRENT_FIRST = sync_current_first
-
-        self.telnet_config: dict = {
-            "host": jasmin_cli_host,
-            "port": jasmin_cli_port,
-            "timeout": jasmin_cli_timeout,
-            "auth": jasmin_cli_auth,
-            "username": jasmin_cli_username,
-            "password": jasmin_cli_password,
-            "standard_prompt": jasmin_cli_standard_prompt,
-            "interactive_prompt": jasmin_cli_interactive_prompt
-        }
 
         logFormatter = logging.Formatter(
             "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -73,94 +49,333 @@ class ConfigurationStreamer:
         fileHandler.setFormatter(logFormatter)
         rootLogger.addHandler(fileHandler)
 
-    def start(self):
-
         logging.info("*********************************************")
         logging.info("::Jasmin MongoDB Configuration::")
         logging.info("")
 
-        mongosource = MongoDB(connection_string=self.MONGO_CONNECTION_STRING,
-                              database_name=self.MONGO_CONFIGURATION_DATABASE)
+        mongosource = MongoDB(
+            connection_string=mongo_connection_string,
+            database_name=configuration_database
+        )
         if mongosource.startConnection() is True:
+            mongosource.set_bill_managment_state(bill_managment)
             mongosource.stream(
-                telnet_config=self.telnet_config, syncCurrentFirst=self.SYNC_CURRENT_FIRST)
+                jasmin_host=jasmin_host,
+                cli_port=cli_port,
+                cli_timeout=cli_timeout,
+                cli_auth=cli_auth,
+                cli_username=cli_username,
+                cli_password=cli_password,
+                cli_standard_prompt=cli_standard_prompt,
+                cli_interactive_prompt=cli_interactive_prompt,
+                pb_port=pb_port,
+                pb_username=pb_username,
+                pb_password=pb_password,
+                syncCurrentFirst=sync_current_first
+            )
+
+
+def str2bool(v: str) -> bool:
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'y', 'true', 't', '1'):
+        return True
+    elif v.lower() in ('no', 'n', 'false', 'f', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def startFromCLI():
-    import argparse
-    parser = argparse.ArgumentParser(
-        description=f"Jasmin MongoDB Configuration, Links Jasmin SMS Gateway to MongoDB cluster's Change Stream (can be one node).")
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
+                                     description=f"Jasmin MongoDB Configuration, Links Jasmin SMS Gateway to MongoDB cluster's Change Stream (can be one node).")
 
-    parser.add_argument('-v', '--version', action='version',
-                        version=f'%(prog)s {pkg_resources.get_distribution("jasmin_mongo_configuration").version}')
+    parser.add_argument('-v', '--version',
+                        action='version',
+                        version=f'%(prog)s {pkg_resources.get_distribution("jasmin_mongo_configuration").version}',
+                        help="\n".join([
+                            'Show version',
+                            ' '
+                        ]))
 
-    parser.add_argument('--connection-string', '-c', type=str, dest='mongo_connection_string',
-                        help='MongoDB Connection String, (Default: ** Required **). ex. mongodb://mongoroot:mongopass@mongodb1:27017,mongodb2:27017,mongodb3:27017/?authSource=admin&replicaSet=rs',
-                        required=os.getenv("MONGO_CONNECTION_STRING") is None,
-                        default=os.getenv("MONGO_CONNECTION_STRING"))
+    mongoConfigurationsParserGroup = parser.add_argument_group(
+        title='MongoDB',
+        description="\n".join([
+            'MongoDB cluster (can be one node) connection configuration section. You can use environment variables instead of command line arguments.',
+        ]))
+    mongoConfigurationsParserGroup.add_argument('-c',
+                                                type=str,
+                                                dest='mongo_connection_string',
+                                                metavar='$connection_string',
+                                                required=os.getenv(
+                                                    "MONGO_CONNECTION_STRING") is None,
+                                                default=os.getenv(
+                                                    "MONGO_CONNECTION_STRING"),
+                                                help="\n".join([
+                                                    'MongoDB Connection String (Default: ** Required **)',
+                                                    'Alternatively: You can use environment variable MONGO_CONNECTION_STRING',
+                                                    'Example: mongodb://mongoroot:mongopass@mongodb1:27017,mongodb2:27017,mongodb3:27017/?authSource=admin&replicaSet=rs',
+                                                    'MongoDB connection string to connect to the cluster',
+                                                    ' '
+                                                ]))
 
-    parser.add_argument('--configuration-database', '-db', type=str, dest='configuration_database',
-                        help='Configuration Database, (Default: ** Required **). MongoDB database name where you have saved the jasmin configurations',
-                        required=os.getenv(
-                            "MONGO_CONFIGURATION_DATABASE") is None,
-                        default=os.getenv("MONGO_CONFIGURATION_DATABASE"))
+    mongoConfigurationsParserGroup.add_argument('-db',
+                                                type=str,
+                                                dest='configuration_database',
+                                                metavar='$database_name',
+                                                required=os.getenv(
+                                                    "MONGO_CONFIGURATION_DATABASE") is None,
+                                                default=os.getenv(
+                                                    "MONGO_CONFIGURATION_DATABASE"),
+                                                help="\n".join([
+                                                    'Configuration Database (Default: ** Required **)',
+                                                    'Alternatively: You can use environment variable MONGO_CONFIGURATION_DATABASE',
+                                                    'MongoDB database name where you have saved the jasmin configurations',
+                                                    ' '
+                                                ]))
 
-    parser.add_argument('--sync-current-first', '-sync', type=bool, dest='sync_current_first',
-                        help=f'Sync current configuration first, (Default: {"Enabled" if DEFAULT_SYNC_CURRENT_FIRST else "Disabled"}). if enabled, will sync the current configurations first before monitoring for any changes',
-                        choices=['yes', 'y', 'no', 'n'],
-                        required=False,
-                        default=bool(os.getenv("SYNC_CURRENT_FIRST", 'yes' if DEFAULT_SYNC_CURRENT_FIRST else 'no').lower() in ['yes', 'y']))
+    appConfigurationsParserGroup = parser.add_argument_group(
+        title='Features',
+        description="\n".join([
+            'Application features section. You can enable or disable them. You can use environment variables instead of command line arguments.',
+        ]))
+    appConfigurationsParserGroup.add_argument('-sync',
+                                              type=str2bool,
+                                              dest='sync_current_first',
+                                              metavar='$is_start_sync',
+                                              required=False,
+                                              default=bool(os.getenv("SYNC_CURRENT_FIRST", 'yes' if DEFAULT_SYNC_CURRENT_FIRST else 'no').lower(
+                                              ) in ['yes', 'true', 't', 'y', '1']),
+                                              help="\n".join([
+                                                  f'Sync current configuration first (Default: {"Enabled" if DEFAULT_SYNC_CURRENT_FIRST else "Disabled"})',
+                                                  'Options: [Enable (true, t, yes, y, 1) and Disable (false, f, no, n, 0)]',
+                                                  'Alternatively: You can use environment variable SYNC_CURRENT_FIRST'
+                                                  'When enabled, will sync the current configurations first before monitoring for any changes',
+                                                  ' '
+                                              ]))
 
-    parser.add_argument('--cli-host', '-H', type=str, dest='jasmin_cli_host',
-                        help=f'Jasmin CLI Host, (Default: "{DEFAULT_JASMIN_CLI_HOST}"). The hostname of the jasmin server',
-                        required=False,
-                        default=os.getenv("JASMIN_CLI_HOST", DEFAULT_JASMIN_CLI_HOST))
+    appConfigurationsParserGroup.add_argument('-bill',
+                                              type=str2bool,
+                                              dest='bill_managment',
+                                              metavar='$is_bill_managment',
+                                              required=False,
+                                              default=bool(os.getenv("JASMIN_MONGO_CONFIGURATION_BILL_MANAGMENT",
+                                                                     'yes' if DEFAULT_BILL_MANAGMENT else 'no').lower() in ['yes', 'y']),
+                                              help="\n".join([
+                                                  f'Bill Managment (Default: {"Enabled" if DEFAULT_BILL_MANAGMENT else "Disabled"})',
+                                                  'Options: [Enable (true, t, yes, y, 1) and Disable (false, f, no, n, 0)]',
+                                                  'Alternatively: You can use environment variable JASMIN_MONGO_CONFIGURATION_BILL_MANAGMENT',
+                                                  'When enabled, the "mt_messaging_cred quota balance" and "mt_messaging_cred quota sms_count" fields in the `user` module',
+                                                  'will be ignored by the Change Stream. Then a special mt/mo interceptors will be installed in jasmin to check for billable messages',
+                                                  'and will be used to bill users.',
+                                                  ' '
+                                              ]))
 
-    parser.add_argument('--cli-port', '-P', type=int, dest='jasmin_cli_port',
-                        help=f'Jasmin CLI Port, (Default: "{DEFAULT_JASMIN_CLI_PORT}"). The port of the jasmin server cli',
-                        required=False,
-                        default=int(os.getenv("JASMIN_CLI_PORT", DEFAULT_JASMIN_CLI_PORT)))
+    jasminParserGroup = parser.add_argument_group(
+        title='Jasmin Connection',
+        description="\n".join([
+            'Jasmin Connection Configurations. You can use the environment variables to set the values instead of command line arguments.',
+        ]))
+    jasminParserGroup.add_argument('-H',
+                                                 type=str,
+                                                 dest='jasmin_host',
+                                                 metavar='$host',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_JASMIN_HOST", DEFAULT_JASMIN_HOST),
+                                                 help="\n".join([
+                                                     f'Jasmin Host (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_JASMIN_HOST',
+                                                     'The hostname of the jasmin server',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--cli-timeout', '-t', type=int, dest='jasmin_cli_timeout',
-                        help=f'Jasmin CLI Timeout, (Default: "{DEFAULT_JASMIN_CLI_TIMEOUT}"). The timeout for the CLI connection. Should be increased if your network is not stable.',
-                        required=False,
-                        default=int(os.getenv("JASMIN_CLI_TIMEOUT", DEFAULT_JASMIN_CLI_TIMEOUT)))
+    cliParserGroup = parser.add_argument_group(
+        title='Jasmin Connection:-> CLI:',
+        description="\n".join([
+            'Jasmin CLI Connection Configurations will be used for Telnet connection. You can use the environment variables to set the values instead of command line arguments.',
+        ]))
 
-    parser.add_argument('--cli-auth', '-a', type=bool, dest='jasmin_cli_auth',
-                        help=f'Jasmin CLI Auth, (Default: {"Enabled" if DEFAULT_JASMIN_CLI_AUTH else "Disabled"}). if enabled, will use authentication for the telnet connection.',
-                        choices=['yes', 'y', 'no', 'n'],
-                        required=False,
-                        default=bool(os.getenv("JASMIN_CLI_AUTH", 'yes' if DEFAULT_JASMIN_CLI_AUTH else 'no').lower() in ['yes', 'y']))
+    cliParserGroup.add_argument('-cli-P',
+                                                 type=int,
+                                                 dest='cli_port',
+                                                 metavar='$port',
+                                                 required=False,
+                                                 default=int(
+                                                     os.getenv("JASMIN_CLI_PORT", DEFAULT_CLI_PORT)),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Port (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_PORT',
+                                                     'The port of the jasmin server cli',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--cli-username', '-u', type=str, dest='jasmin_cli_username',
-                        help=f'Jasmin CLI Username, (Default: "{DEFAULT_JASMIN_CLI_USERNAME}"). The jasmin telnet cli username',
-                        required=False,
-                        default=os.getenv("JASMIN_CLI_USERNAME", DEFAULT_JASMIN_CLI_USERNAME))
+    cliParserGroup.add_argument('-cli-t',
+                                                 type=int,
+                                                 dest='cli_timeout',
+                                                 metavar='$timeout',
+                                                 required=False,
+                                                 default=int(
+                                                     os.getenv("JASMIN_CLI_TIMEOUT", DEFAULT_CLI_TIMEOUT)),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Timeout (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_TIMEOUT',
+                                                     'The timeout for the CLI connection. Should be increased if your network is not stable.',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--cli-password', '-p', type=str, dest='jasmin_cli_password',
-                        help=f'Jasmin CLI Password, (Default: "{DEFAULT_JASMIN_CLI_PASSWORD}"). The jasmin telnet cli password',
-                        required=False,
-                        default=os.getenv("JASMIN_CLI_PASSWORD", DEFAULT_JASMIN_CLI_PASSWORD))
+    cliParserGroup.add_argument('-cli-standard-prompt',
+                                                 type=str,
+                                                 dest='cli_standard_prompt',
+                                                 metavar='$standard_prompt',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_CLI_STANDARD_PROMPT", DEFAULT_CLI_STANDARD_PROMPT),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Standard Prompt (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_STANDARD_PROMPT',
+                                                     'There shouldn\'t be a need to change this.',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--cli-standard-prompt', type=str, dest='jasmin_cli_standard_prompt',
-                        help=f'Jasmin CLI Standard Prompt, (Default: "{DEFAULT_JASMIN_CLI_STANDARD_PROMPT}"). There shouldn\'t be a need to change this.',
-                        required=False,
-                        default=os.getenv("JASMIN_CLI_STANDARD_PROMPT", DEFAULT_JASMIN_CLI_STANDARD_PROMPT))
+    cliParserGroup.add_argument('-cli-interactive-prompt',
+                                                 type=str,
+                                                 dest='cli_interactive_prompt',
+                                                 metavar='$interactive_prompt',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_CLI_INTERACTIVE_PROMPT", DEFAULT_CLI_INTERACTIVE_PROMPT),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Interactive Prompt (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_INTERACTIVE_PROMPT',
+                                                     'There shouldn\'t be a need to change this.',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--cli-interactive-prompt', type=str, dest='jasmin_cli_interactive_prompt',
-                        help=f'Jasmin CLI Interactive Prompt, (Default: "{DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT}"). There shouldn\'t be a need to change this.',
-                        required=False,
-                        default=os.getenv("JASMIN_CLI_INTERACTIVE_PROMPT", DEFAULT_JASMIN_CLI_INTERACTIVE_PROMPT))
+    cliParserGroup.add_argument('-cli-auth',
+                                                 type=str2bool,
+                                                 dest='cli_auth',
+                                                 metavar='$is_auth',
+                                                 required=False,
+                                                 default=bool(os.getenv(
+                                                     "JASMIN_CLI_AUTH", 'yes' if DEFAULT_CLI_AUTH else 'no').lower() in ['yes', 'y']),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Auth (Default: {"Enabled" if DEFAULT_CLI_AUTH else "Disabled"})',
+                                                     'Options: [Enable (true, t, yes, y, 1) and Disable (false, f, no, n, 0)]',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_AUTH',
+                                                     'When enabled, will use authentication for the telnet connection.',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--log-path', type=str, dest='logPath',
-                        help=f'Log Path, (Default: "{DEFAULT_LOG_PATH}")',
-                        required=False,
-                        default=os.getenv("JASMIN_MONGO_CONFIGURATION_LOG_PATH", DEFAULT_LOG_PATH))
+    cliParserGroup.add_argument('-cli-u',
+                                                 type=str,
+                                                 dest='cli_username',
+                                                 metavar='$username',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_CLI_USERNAME", DEFAULT_CLI_USERNAME),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Username (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_USERNAME',
+                                                     'The jasmin telnet cli username',
+                                                     ' '
+                                                 ]))
 
-    parser.add_argument('--log-level', type=str, dest='logLevel',
-                        help=f'Log Level, (Default: "{DEFAULT_LOG_LEVEL}")',
-                        required=False,
-                        default=os.getenv("JASMIN_MONGO_CONFIGURATION_LOG_LEVEL", DEFAULT_LOG_LEVEL))
+    cliParserGroup.add_argument('-cli-p',
+                                                 type=str,
+                                                 dest='cli_password',
+                                                 metavar='$password',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_CLI_PASSWORD", DEFAULT_CLI_PASSWORD),
+                                                 help="\n".join([
+                                                     f'Jasmin CLI Password (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_CLI_PASSWORD',
+                                                     'The jasmin telnet cli password',
+                                                     ' '
+                                                 ]))
+    
+    
+    pbParserGroup = parser.add_argument_group(
+        title='Jasmin Connection:-> Router PB Proxy',
+        description="\n".join([
+            'Jasmin Router PB Proxy Connection Configurations will be used in Router PB Proxy connection. You can use the environment variables to set the values instead of command line arguments.',
+        ]))
+
+    pbParserGroup.add_argument('-pb-P',
+                                                 type=int,
+                                                 dest='pb_port',
+                                                 metavar='$port',
+                                                 required=False,
+                                                 default=int(
+                                                     os.getenv("JASMIN_ROUTER_PB_PROXY_PORT", DEFAULT_ROUTER_PB_PROXY_PORT)),
+                                                 help="\n".join([
+                                                     f'Jasmin ROUTER_PB_PROXY Port (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PORT',
+                                                     'The port of the jasmin server ROUTER_PB_PROXY',
+                                                     ' '
+                                                 ]))
+
+    pbParserGroup.add_argument('-pb-u',
+                                                 type=str,
+                                                 dest='cli_username',
+                                                 metavar='$username',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_ROUTER_PB_PROXY_USERNAME", DEFAULT_ROUTER_PB_PROXY_USERNAME),
+                                                 help="\n".join([
+                                                     f'Jasmin ROUTER_PB_PROXY Username (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_USERNAME',
+                                                     'The jasmin telnet ROUTER_PB_PROXY username',
+                                                     ' '
+                                                 ]))
+
+    pbParserGroup.add_argument('-pb-p',
+                                                 type=str,
+                                                 dest='cli_password',
+                                                 metavar='$password',
+                                                 required=False,
+                                                 default=os.getenv(
+                                                     "JASMIN_ROUTER_PB_PROXY_PASSWORD", DEFAULT_ROUTER_PB_PROXY_PASSWORD),
+                                                 help="\n".join([
+                                                     f'Jasmin ROUTER_PB_PROXY Password (Default: "%(default)s")',
+                                                     'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PASSWORD',
+                                                     'The jasmin telnet ROUTER_PB_PROXY password',
+                                                     ' '
+                                                 ]))
+
+
+
+    loggingConfigsParserGroup = parser.add_argument_group(
+        title='Logging',
+        description="\n".join([
+            'Logging Configurations. You can use the environment variables to set the values instead of command line arguments.',
+        ]))
+    loggingConfigsParserGroup.add_argument('--log-path',
+                                           type=str,
+                                           dest='logPath',
+                                           metavar='$path',
+                                           required=False,
+                                           default=os.getenv(
+                                               "JASMIN_MONGO_CONFIGURATION_LOG_PATH", DEFAULT_LOG_PATH),
+                                           help="\n".join([
+                                               f'Log Path (Default: "%(default)s")',
+                                               'Alternatively: You can use environment variable JASMIN_MONGO_CONFIGURATION_LOG_PATH',
+                                               ' '
+                                           ]))
+
+    loggingConfigsParserGroup.add_argument('--log-level',
+                                           type=str,
+                                           dest='logLevel',
+                                           metavar='$level',
+                                           required=False,
+                                           default=os.getenv(
+                                               "JASMIN_MONGO_CONFIGURATION_LOG_LEVEL", DEFAULT_LOG_LEVEL),
+                                           help="\n".join([
+                                               f'Log Level (Default: "%(default)s")',
+                                               'Alternatively: You can use environment variable JASMIN_MONGO_CONFIGURATION_LOG_LEVEL',
+                                               ' '
+                                           ]))
 
     configurationstreamer = ConfigurationStreamer(**vars(parser.parse_args()))
 
