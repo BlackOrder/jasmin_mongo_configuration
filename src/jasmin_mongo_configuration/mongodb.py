@@ -1,11 +1,11 @@
 import logging
 
+import pkg_resources
 from jasmin_telnet.proxy import Proxy as JasminTelnetProxy
 from pymongo import MongoClient
 from pymongo import errors as MongoErrors
 from pymongo.database import Database as MongoDatabase
 
-from jasmin_mongo_configuration.interceptorsinstaller import InterceptorsInstaller
 from jasmin_mongo_configuration.defaults import *
 
 
@@ -177,13 +177,23 @@ class MongoDB:
 
                 if self.get_bill_managment_state() is True:
                     logging.info("Bill managment Enabled!")
-                    logging.info("Installing billing interceptors")
-                    InterceptorsInstaller(
-                        host=jasmin_host,
-                        port=pb_port,
-                        username=pb_username,
-                        password=pb_password,
-                    )
+                    try:
+                        from jasmin_mongo_configuration.interceptorsinstaller import \
+                            InterceptorsInstaller
+                        logging.info("Installing billing interceptors")
+                        InterceptorsInstaller(
+                            host=jasmin_host,
+                            port=pb_port,
+                            username=pb_username,
+                            password=pb_password,
+                        )
+                        logging.info("")
+                    except ModuleNotFoundError as err:
+                        logging.warn("This service can not detect jasmin. Please install interceptors manually.")
+                        logging.warn(f"MtInterceptor: {pkg_resources.resource_filename(__name__, 'interceptors/mt.py')}")
+                        logging.warn(f"MoInterceptor: {pkg_resources.resource_filename(__name__, 'interceptors/mo.py')}")
+                        logging.warn("or you can install jasmin's pip package to be able to use PB proxy to auto install interceptors.")
+                        logging.info("")
 
                 logging.info("Starting MongoDB cluster's Change Stream")
                 logging.info("")

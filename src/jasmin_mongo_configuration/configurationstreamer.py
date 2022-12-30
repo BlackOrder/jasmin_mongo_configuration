@@ -295,54 +295,54 @@ def startFromCLI():
                                                      ' '
                                                  ]))
     
-    
-    pbParserGroup = parser.add_argument_group(
-        title='Jasmin Connection:-> Router PB Proxy',
-        description="\n".join([
-            'Jasmin Router PB Proxy Connection Configurations will be used in Router PB Proxy connection. You can use the environment variables to set the values instead of command line arguments.',
-        ]))
+    if "jasmin" in [pkg.key for pkg in pkg_resources.working_set]:
+        pbParserGroup = parser.add_argument_group(
+            title='Jasmin Connection:-> Router PB Proxy',
+            description="\n".join([
+                'Jasmin Router PB Proxy Connection Configurations will be used in Router PB Proxy connection. You can use the environment variables to set the values instead of command line arguments.',
+            ]))
 
-    pbParserGroup.add_argument('-pb-P',
-                                                 type=int,
-                                                 dest='pb_port',
-                                                 metavar='$port',
-                                                 required=False,
-                                                 default=int(
-                                                     os.getenv("JASMIN_ROUTER_PB_PROXY_PORT", DEFAULT_ROUTER_PB_PROXY_PORT)),
-                                                 help="\n".join([
-                                                     f'Jasmin ROUTER_PB_PROXY Port (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PORT',
-                                                     'The port of the jasmin server ROUTER_PB_PROXY',
-                                                     ' '
-                                                 ]))
+        pbParserGroup.add_argument('-pb-P',
+                                                    type=int,
+                                                    dest='pb_port',
+                                                    metavar='$port',
+                                                    required=False,
+                                                    default=int(
+                                                        os.getenv("JASMIN_ROUTER_PB_PROXY_PORT", DEFAULT_ROUTER_PB_PROXY_PORT)),
+                                                    help="\n".join([
+                                                        f'Jasmin ROUTER_PB_PROXY Port (Default: "%(default)s")',
+                                                        'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PORT',
+                                                        'The port of the jasmin server ROUTER_PB_PROXY',
+                                                        ' '
+                                                    ]))
 
-    pbParserGroup.add_argument('-pb-u',
-                                                 type=str,
-                                                 dest='cli_username',
-                                                 metavar='$username',
-                                                 required=False,
-                                                 default=os.getenv(
-                                                     "JASMIN_ROUTER_PB_PROXY_USERNAME", DEFAULT_ROUTER_PB_PROXY_USERNAME),
-                                                 help="\n".join([
-                                                     f'Jasmin ROUTER_PB_PROXY Username (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_USERNAME',
-                                                     'The jasmin telnet ROUTER_PB_PROXY username',
-                                                     ' '
-                                                 ]))
+        pbParserGroup.add_argument('-pb-u',
+                                                    type=str,
+                                                    dest='cli_username',
+                                                    metavar='$username',
+                                                    required=False,
+                                                    default=os.getenv(
+                                                        "JASMIN_ROUTER_PB_PROXY_USERNAME", DEFAULT_ROUTER_PB_PROXY_USERNAME),
+                                                    help="\n".join([
+                                                        f'Jasmin ROUTER_PB_PROXY Username (Default: "%(default)s")',
+                                                        'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_USERNAME',
+                                                        'The jasmin telnet ROUTER_PB_PROXY username',
+                                                        ' '
+                                                    ]))
 
-    pbParserGroup.add_argument('-pb-p',
-                                                 type=str,
-                                                 dest='cli_password',
-                                                 metavar='$password',
-                                                 required=False,
-                                                 default=os.getenv(
-                                                     "JASMIN_ROUTER_PB_PROXY_PASSWORD", DEFAULT_ROUTER_PB_PROXY_PASSWORD),
-                                                 help="\n".join([
-                                                     f'Jasmin ROUTER_PB_PROXY Password (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PASSWORD',
-                                                     'The jasmin telnet ROUTER_PB_PROXY password',
-                                                     ' '
-                                                 ]))
+        pbParserGroup.add_argument('-pb-p',
+                                                    type=str,
+                                                    dest='cli_password',
+                                                    metavar='$password',
+                                                    required=False,
+                                                    default=os.getenv(
+                                                        "JASMIN_ROUTER_PB_PROXY_PASSWORD", DEFAULT_ROUTER_PB_PROXY_PASSWORD),
+                                                    help="\n".join([
+                                                        f'Jasmin ROUTER_PB_PROXY Password (Default: "%(default)s")',
+                                                        'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PASSWORD',
+                                                        'The jasmin telnet ROUTER_PB_PROXY password',
+                                                        ' '
+                                                    ]))
 
 
 
