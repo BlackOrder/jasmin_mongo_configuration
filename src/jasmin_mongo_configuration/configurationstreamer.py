@@ -1,11 +1,12 @@
 import argparse
 import logging
 import os
+import sys
 
 import pkg_resources
 
-from jasmin_mongo_configuration.mongodb import MongoDB
 from jasmin_mongo_configuration.defaults import *
+from jasmin_mongo_configuration.mongodb import MongoDB
 
 
 class ConfigurationStreamer:
@@ -165,123 +166,132 @@ def startFromCLI():
                                                   ' '
                                               ]))
 
+    appConfigurationsParserGroup.add_argument('-get-interceptor',
+                                              type=str,
+                                              choices=['mo', 'mt'],
+                                              required=False,
+                                              help="\n".join([
+                                                  'Print the billing manager MO or MT interceptor and exit',
+                                                  ' '
+                                              ]))
+
     jasminParserGroup = parser.add_argument_group(
         title='Jasmin Connection',
         description="\n".join([
             'Jasmin Connection Configurations. You can use the environment variables to set the values instead of command line arguments.',
         ]))
     jasminParserGroup.add_argument('-H',
-                                                 type=str,
+                                   type=str,
                                    dest='cli_host',
-                                                 metavar='$host',
-                                                 required=False,
-                                                 default=os.getenv(
+                                   metavar='$host',
+                                   required=False,
+                                   default=os.getenv(
                                        "JASMIN_CLI_HOST", DEFAULT_CLI_HOST),
-                                                 help="\n".join([
-                                                     f'Jasmin Host (Default: "%(default)s")',
+                                   help="\n".join([
+                                       f'Jasmin Host (Default: "%(default)s")',
                                        'Alternatively: You can use environment variable JASMIN_CLI_HOST',
-                                                     'The hostname of the jasmin server',
-                                                     ' '
-                                                 ]))
+                                       'The hostname of the jasmin server',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-P',
-                                                 type=int,
-                                                 dest='cli_port',
-                                                 metavar='$port',
-                                                 required=False,
-                                                 default=int(
-                                                     os.getenv("JASMIN_CLI_PORT", DEFAULT_CLI_PORT)),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Port (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_PORT',
-                                                     'The port of the jasmin server cli',
-                                                     ' '
-                                                 ]))
+                                   type=int,
+                                   dest='cli_port',
+                                   metavar='$port',
+                                   required=False,
+                                   default=int(
+                                       os.getenv("JASMIN_CLI_PORT", DEFAULT_CLI_PORT)),
+                                   help="\n".join([
+                                       f'Jasmin CLI Port (Default: "%(default)s")',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_PORT',
+                                       'The port of the jasmin server cli',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-t',
-                                                 type=int,
-                                                 dest='cli_timeout',
-                                                 metavar='$timeout',
-                                                 required=False,
-                                                 default=int(
-                                                     os.getenv("JASMIN_CLI_TIMEOUT", DEFAULT_CLI_TIMEOUT)),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Timeout (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_TIMEOUT',
-                                                     'The timeout for the CLI connection. Should be increased if your network is not stable.',
-                                                     ' '
-                                                 ]))
+                                   type=int,
+                                   dest='cli_timeout',
+                                   metavar='$timeout',
+                                   required=False,
+                                   default=int(
+                                       os.getenv("JASMIN_CLI_TIMEOUT", DEFAULT_CLI_TIMEOUT)),
+                                   help="\n".join([
+                                       f'Jasmin CLI Timeout (Default: "%(default)s")',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_TIMEOUT',
+                                       'The timeout for the CLI connection. Should be increased if your network is not stable.',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-standard-prompt',
-                                                 type=str,
-                                                 dest='cli_standard_prompt',
-                                                 metavar='$standard_prompt',
-                                                 required=False,
-                                                 default=os.getenv(
-                                                     "JASMIN_CLI_STANDARD_PROMPT", DEFAULT_CLI_STANDARD_PROMPT),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Standard Prompt (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_STANDARD_PROMPT',
-                                                     'There shouldn\'t be a need to change this.',
-                                                     ' '
-                                                 ]))
+                                   type=str,
+                                   dest='cli_standard_prompt',
+                                   metavar='$standard_prompt',
+                                   required=False,
+                                   default=os.getenv(
+                                       "JASMIN_CLI_STANDARD_PROMPT", DEFAULT_CLI_STANDARD_PROMPT),
+                                   help="\n".join([
+                                       f'Jasmin CLI Standard Prompt (Default: "%(default)s")',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_STANDARD_PROMPT',
+                                       'There shouldn\'t be a need to change this.',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-interactive-prompt',
-                                                 type=str,
-                                                 dest='cli_interactive_prompt',
-                                                 metavar='$interactive_prompt',
-                                                 required=False,
-                                                 default=os.getenv(
-                                                     "JASMIN_CLI_INTERACTIVE_PROMPT", DEFAULT_CLI_INTERACTIVE_PROMPT),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Interactive Prompt (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_INTERACTIVE_PROMPT',
-                                                     'There shouldn\'t be a need to change this.',
-                                                     ' '
-                                                 ]))
+                                   type=str,
+                                   dest='cli_interactive_prompt',
+                                   metavar='$interactive_prompt',
+                                   required=False,
+                                   default=os.getenv(
+                                       "JASMIN_CLI_INTERACTIVE_PROMPT", DEFAULT_CLI_INTERACTIVE_PROMPT),
+                                   help="\n".join([
+                                       f'Jasmin CLI Interactive Prompt (Default: "%(default)s")',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_INTERACTIVE_PROMPT',
+                                       'There shouldn\'t be a need to change this.',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-auth',
-                                                 type=str2bool,
-                                                 dest='cli_auth',
-                                                 metavar='$is_auth',
-                                                 required=False,
-                                                 default=bool(os.getenv(
-                                                     "JASMIN_CLI_AUTH", 'yes' if DEFAULT_CLI_AUTH else 'no').lower() in ['yes', 'y']),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Auth (Default: {"Enabled" if DEFAULT_CLI_AUTH else "Disabled"})',
-                                                     'Options: [Enable (true, t, yes, y, 1) and Disable (false, f, no, n, 0)]',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_AUTH',
-                                                     'When enabled, will use authentication for the telnet connection.',
-                                                     ' '
-                                                 ]))
+                                   type=str2bool,
+                                   dest='cli_auth',
+                                   metavar='$is_auth',
+                                   required=False,
+                                   default=bool(os.getenv(
+                                       "JASMIN_CLI_AUTH", 'yes' if DEFAULT_CLI_AUTH else 'no').lower() in ['yes', 'y']),
+                                   help="\n".join([
+                                       f'Jasmin CLI Auth (Default: {"Enabled" if DEFAULT_CLI_AUTH else "Disabled"})',
+                                       'Options: [Enable (true, t, yes, y, 1) and Disable (false, f, no, n, 0)]',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_AUTH',
+                                       'When enabled, will use authentication for the telnet connection.',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-u',
-                                                 type=str,
-                                                 dest='cli_username',
-                                                 metavar='$username',
-                                                 required=False,
-                                                 default=os.getenv(
-                                                     "JASMIN_CLI_USERNAME", DEFAULT_CLI_USERNAME),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Username (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_USERNAME',
-                                                     'The jasmin telnet cli username',
-                                                     ' '
-                                                 ]))
+                                   type=str,
+                                   dest='cli_username',
+                                   metavar='$username',
+                                   required=False,
+                                   default=os.getenv(
+                                       "JASMIN_CLI_USERNAME", DEFAULT_CLI_USERNAME),
+                                   help="\n".join([
+                                       f'Jasmin CLI Username (Default: "%(default)s")',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_USERNAME',
+                                       'The jasmin telnet cli username',
+                                       ' '
+                                   ]))
 
     jasminParserGroup.add_argument('-p',
-                                                 type=str,
-                                                 dest='cli_password',
-                                                 metavar='$password',
-                                                 required=False,
-                                                 default=os.getenv(
-                                                     "JASMIN_CLI_PASSWORD", DEFAULT_CLI_PASSWORD),
-                                                 help="\n".join([
-                                                     f'Jasmin CLI Password (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_CLI_PASSWORD',
-                                                     'The jasmin telnet cli password',
-                                                     ' '
-                                                 ]))
+                                   type=str,
+                                   dest='cli_password',
+                                   metavar='$password',
+                                   required=False,
+                                   default=os.getenv(
+                                       "JASMIN_CLI_PASSWORD", DEFAULT_CLI_PASSWORD),
+                                   help="\n".join([
+                                       f'Jasmin CLI Password (Default: "%(default)s")',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_PASSWORD',
+                                       'The jasmin telnet cli password',
+                                       ' '
+                                   ]))
 
     loggingConfigsParserGroup = parser.add_argument_group(
         title='Logging',
@@ -314,6 +324,12 @@ def startFromCLI():
                                                ' '
                                            ]))
 
-    configurationstreamer = ConfigurationStreamer(**vars(parser.parse_args()))
+    parserNamespace = parser.parse_args()
 
-    configurationstreamer.start()
+    if parserNamespace.get_interceptor is not None:
+        print(f"{pkg_resources.resource_string(__name__, f'interceptors/{parserNamespace.get_interceptor}.py').decode('utf8')}", flush=True)
+        sys.exit(0)
+
+    if parserNamespace.get_interceptor is None:
+        del parserNamespace.get_interceptor
+        ConfigurationStreamer(**vars(parserNamespace))
