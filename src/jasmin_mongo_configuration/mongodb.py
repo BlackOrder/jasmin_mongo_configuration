@@ -159,6 +159,17 @@ class MongoDB:
             with self.database.watch(full_document='updateLookup') as stream:
                 if self.get_bill_managment_state() is True:
                     logging.info("Bill managment Enabled!")
+                    logging.warn("Need to install interceptors manually!")
+                    logging.info(
+                        "For the MT Interceptor blueprint, please use the following command:")
+                    logging.info(
+                        "jasminmongoconfd -get-interceptor mt > mtinterceptor.py")
+                    logging.info(
+                        "For the MO Interceptor blueprint, please use the following command:")
+                    logging.info(
+                        "jasminmongoconfd -get-interceptor mo > mointerceptor.py")
+                    logging.info(
+                        "Then, please edit & copy the files to the jasmin's server manually and then add the Interceptors to the jasmin's config collection")
                     logging.info(" ")
 
                 if syncCurrentFirst is True:
@@ -193,10 +204,10 @@ class MongoDB:
                         sub_data = {}
 
                     if self.get_bill_managment_state() is True and module == "user":
-                            if isinstance(sub_data, dict) and "mt_messaging_cred quota balance" in sub_data:
-                                del sub_data["mt_messaging_cred quota balance"]
-                            if isinstance(sub_data, dict) and "mt_messaging_cred quota sms_count" in sub_data:
-                                del sub_data["mt_messaging_cred quota sms_count"]
+                        if isinstance(sub_data, dict) and "mt_messaging_cred quota balance" in sub_data:
+                            del sub_data["mt_messaging_cred quota balance"]
+                        if isinstance(sub_data, dict) and "mt_messaging_cred quota sms_count" in sub_data:
+                            del sub_data["mt_messaging_cred quota sms_count"]
 
                     if isinstance(sub_data, dict) and "_id" in sub_data:
                         del sub_data["_id"]
