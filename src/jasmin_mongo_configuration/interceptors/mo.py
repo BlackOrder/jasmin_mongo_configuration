@@ -1,1 +1,93 @@
-print('this is mo')
+"""
+Jasmin MongoDB Configuration - MO Interceptor
+
+This interceptor is used to check if a user have enough credit to receive a message
+
+Requirements:
+    - pymongo: pip install pymongo
+"""
+import os
+
+from pymongo import MongoClient
+from pymongo import errors as MongoErrors
+from pymongo.collection import Collection as MongoCollection
+from pymongo.database import Database as MongoDatabase
+
+# Get MongoDB connection parameters
+MONGO_CONNECTION_STRING = os.getenv(
+    'MONGO_CONNECTION_STRING', 'mongodb://{$MONGODB_USERNAME}:{$MONGODB_PASSWORD}@mongodb1:27017,mongodb2:27017,mongodb3:27017/?authSource=admin&replicaSet=rs')
+MONGO_BILLING_DATABASE = os.getenv(
+    'MONGO_BILLING_DATABASE', 'configs')
+MONGO_BILLING_COLLECTION = os.getenv(
+    'MONGO_BILLING_COLLECTION', 'user')
+MONGO_BILLING_FIELD = os.getenv(
+    'MONGO_BILLING_FIELD', 'mt_messaging_cred quota sms_count')
+MONGO_BILLING_MO_DESTINATION_ADDR_FIELD = os.getenv(
+    'MONGO_BILLING_MO_DESTINATION_ADDR_FIELD', '"mt_messaging_cred valuefilter src_addr')
+
+
+def charge_MO(destination_addr, amount):
+    """Charge a user for a message
+
+    :param destination_addr: The source address
+    :type destination_addr: str
+    :param amount: The amount to charge
+    :type amount: int
+    :return: The SMPP status
+    :rtype: int
+    """
+    try:
+        mongoclient = MongoClient(MONGO_CONNECTION_STRING)
+        server_info = mongoclient.server_info()
+        if isinstance(server_info, dict) and 'ok' in server_info and server_info['ok'] == 1:
+            """Connected to MongoDB"""
+            database: MongoDatabase = mongoclient[MONGO_BILLING_DATABASE]
+            database_info = database.command("buildinfo")
+            if isinstance(database_info, dict) and 'ok' in database_info and database_info['ok'] == 1:
+                """database exists"""
+                collection: MongoCollection = database[MONGO_BILLING_COLLECTION]
+                user = collection.find_one(
+                    {f"{MONGO_BILLING_MO_DESTINATION_ADDR_FIELD}": {'$regex': destination_addr}})
+                if user is not None:
+                    updateresult = collection.update_one(
+                        {"_id": user['_id']}, {'$inc': {f"{MONGO_BILLING_FIELD}": amount}})
+                    if updateresult.modified_count == 1:
+                        """User has been charged"""
+                        # Return ESME_ROK
+                        return 0
+                    else:
+                        """User has not been charged"""
+                        # Return ESME_RTHROTTLED
+                        return 88
+                else:
+                    """User cannot be found"""
+                    # Return ESME_RDELIVERYFAILURE
+                    return 254
+            else:
+                """database does not exist"""
+                # Return ESME_RDELIVERYFAILURE
+                return 254
+        else:
+            """Could not connect to MongoDB"""
+            # Return ESME_RDELIVERYFAILURE
+            return 254
+
+    except Exception:
+        # We got an error when calling for charging
+        # Return ESME_RDELIVERYFAILURE
+        return 254
+
+    except MongoErrors:
+        # We got an error when calling for charging
+        # Return ESME_RDELIVERYFAILURE
+        return 254
+
+
+_pdu = routable.pdu
+amount = -1
+while hasattr(_pdu, 'nextPdu'):
+    _pdu = _pdu.nextPdu
+    amount -= 1
+
+smpp_status = charge_MO(
+    routable.pdu.params['destination_addr'].decode('utf-8'), amount)
