@@ -114,9 +114,7 @@ class MongoDB:
 
             for row in cursor:
                 if self.get_bill_managment_state() is True:
-                    if module in ["mtinterceptor", "mointerceptor"]:
-                        break
-                    elif module == "user":
+                    if module == "user":
                         row["mt_messaging_cred quota balance"] = "None"
                         row["mt_messaging_cred quota sms_count"] = "None"
 
@@ -194,11 +192,7 @@ class MongoDB:
                     else:
                         sub_data = {}
 
-                    if self.get_bill_managment_state() is True:
-                        if module in ["mtinterceptor", "mointerceptor"]:
-                            """Bill managment enabled: skip interceptors"""
-                            return
-                        if module == "user":
+                    if self.get_bill_managment_state() is True and module == "user":
                             if isinstance(sub_data, dict) and "mt_messaging_cred quota balance" in sub_data:
                                 del sub_data["mt_messaging_cred quota balance"]
                             if isinstance(sub_data, dict) and "mt_messaging_cred quota sms_count" in sub_data:
