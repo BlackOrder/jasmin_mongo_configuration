@@ -135,7 +135,7 @@ class MongoDB:
 
     def stream(
         self,
-        jasmin_host: str = DEFAULT_JASMIN_HOST,
+        cli_host: str = DEFAULT_CLI_HOST,
         cli_port: int = DEFAULT_CLI_PORT,
         cli_timeout: int = DEFAULT_CLI_TIMEOUT,
         cli_auth: bool = DEFAULT_CLI_AUTH,
@@ -143,14 +143,11 @@ class MongoDB:
         cli_password: str = DEFAULT_CLI_PASSWORD,
         cli_standard_prompt: str = DEFAULT_CLI_STANDARD_PROMPT,
         cli_interactive_prompt: str = DEFAULT_CLI_INTERACTIVE_PROMPT,
-        pb_port: int = DEFAULT_ROUTER_PB_PROXY_PORT,
-        pb_username: str = DEFAULT_ROUTER_PB_PROXY_USERNAME,
-        pb_password: str = DEFAULT_ROUTER_PB_PROXY_PASSWORD,
         syncCurrentFirst: bool = False
     ):
 
         self.cli_conn: dict = {
-            "host": jasmin_host,
+            "host": cli_host,
             "port": cli_port,
             "timeout": cli_timeout,
             "auth": cli_auth,
@@ -162,6 +159,9 @@ class MongoDB:
 
         try:
             with self.database.watch(full_document='updateLookup') as stream:
+                if self.get_bill_managment_state() is True:
+                    logging.info("Bill managment Enabled!")
+                    logging.info(" ")
 
                 if syncCurrentFirst is True:
                     # Sync current data to Jasmin before waiting for changes
@@ -174,26 +174,6 @@ class MongoDB:
                     logging.info(
                         "Skipping synchronizing current configurations")
                     logging.info("")
-
-                if self.get_bill_managment_state() is True:
-                    logging.info("Bill managment Enabled!")
-                    try:
-                        from jasmin_mongo_configuration.interceptorsinstaller import \
-                            InterceptorsInstaller
-                        logging.info("Installing billing interceptors")
-                        InterceptorsInstaller(
-                            host=jasmin_host,
-                            port=pb_port,
-                            username=pb_username,
-                            password=pb_password,
-                        )
-                        logging.info("")
-                    except ModuleNotFoundError as err:
-                        logging.warn("This service can not detect jasmin. Please install interceptors manually.")
-                        logging.warn(f"MtInterceptor: {pkg_resources.resource_filename(__name__, 'interceptors/mt.py')}")
-                        logging.warn(f"MoInterceptor: {pkg_resources.resource_filename(__name__, 'interceptors/mo.py')}")
-                        logging.warn("or you can install jasmin's pip package to be able to use PB proxy to auto install interceptors.")
-                        logging.info("")
 
                 logging.info("Starting MongoDB cluster's Change Stream")
                 logging.info("")
@@ -253,7 +233,7 @@ class MongoDB:
     def stream_handler(self, payload):
         """Handle callback for jasmin stream"""
         jasmin_proxy = JasminTelnetProxy(
-            host=self.cli_conn.get("host", DEFAULT_JASMIN_HOST),
+            host=self.cli_conn.get("host", DEFAULT_CLI_HOST),
             port=self.cli_conn.get("port", DEFAULT_CLI_PORT),
             timeout=self.cli_conn.get("timeout", DEFAULT_CLI_TIMEOUT),
             auth=self.cli_conn.get("auth", DEFAULT_CLI_AUTH),

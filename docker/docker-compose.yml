@@ -8,7 +8,7 @@ services:
     networks:
       - mongo-cluster_cluster_subnet
     environment:
-      JASMIN_JASMIN_HOST: ${JASMIN_JASMIN_HOST:-jasmin}
+      JASMIN_CLI_HOST: ${JASMIN_CLI_HOST:-jasmin}
       JASMIN_CLI_PORT: ${JASMIN_CLI_PORT:-8990}
       JASMIN_CLI_TIMEOUT: ${JASMIN_CLI_TIMEOUT:-30}
       JASMIN_CLI_AUTH: ${JASMIN_CLI_AUTH:-True}

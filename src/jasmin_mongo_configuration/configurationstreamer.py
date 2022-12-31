@@ -15,7 +15,7 @@ class ConfigurationStreamer:
         configuration_database: str,
         sync_current_first: bool = DEFAULT_SYNC_CURRENT_FIRST,
         bill_managment: bool = DEFAULT_BILL_MANAGMENT,
-        jasmin_host: str = DEFAULT_JASMIN_HOST,
+        cli_host: str = DEFAULT_CLI_HOST,
         cli_port: int = DEFAULT_CLI_PORT,
         cli_timeout: int = DEFAULT_CLI_TIMEOUT,
         cli_auth: bool = DEFAULT_CLI_AUTH,
@@ -23,9 +23,6 @@ class ConfigurationStreamer:
         cli_password: str = DEFAULT_CLI_PASSWORD,
         cli_standard_prompt: str = DEFAULT_CLI_STANDARD_PROMPT,
         cli_interactive_prompt: str = DEFAULT_CLI_INTERACTIVE_PROMPT,
-        pb_port: int = DEFAULT_ROUTER_PB_PROXY_PORT,
-        pb_username: str = DEFAULT_ROUTER_PB_PROXY_USERNAME,
-        pb_password: str = DEFAULT_ROUTER_PB_PROXY_PASSWORD,
         logPath: str = DEFAULT_LOG_PATH,
         logLevel: str = DEFAULT_LOG_LEVEL
     ):
@@ -60,7 +57,7 @@ class ConfigurationStreamer:
         if mongosource.startConnection() is True:
             mongosource.set_bill_managment_state(bill_managment)
             mongosource.stream(
-                jasmin_host=jasmin_host,
+                cli_host=cli_host,
                 cli_port=cli_port,
                 cli_timeout=cli_timeout,
                 cli_auth=cli_auth,
@@ -68,9 +65,6 @@ class ConfigurationStreamer:
                 cli_password=cli_password,
                 cli_standard_prompt=cli_standard_prompt,
                 cli_interactive_prompt=cli_interactive_prompt,
-                pb_port=pb_port,
-                pb_username=pb_username,
-                pb_password=pb_password,
                 syncCurrentFirst=sync_current_first
             )
 
@@ -178,25 +172,19 @@ def startFromCLI():
         ]))
     jasminParserGroup.add_argument('-H',
                                                  type=str,
-                                                 dest='jasmin_host',
+                                   dest='cli_host',
                                                  metavar='$host',
                                                  required=False,
                                                  default=os.getenv(
-                                                     "JASMIN_JASMIN_HOST", DEFAULT_JASMIN_HOST),
+                                       "JASMIN_CLI_HOST", DEFAULT_CLI_HOST),
                                                  help="\n".join([
                                                      f'Jasmin Host (Default: "%(default)s")',
-                                                     'Alternatively: You can use environment variable JASMIN_JASMIN_HOST',
+                                       'Alternatively: You can use environment variable JASMIN_CLI_HOST',
                                                      'The hostname of the jasmin server',
                                                      ' '
                                                  ]))
 
-    cliParserGroup = parser.add_argument_group(
-        title='Jasmin Connection:-> CLI:',
-        description="\n".join([
-            'Jasmin CLI Connection Configurations will be used for Telnet connection. You can use the environment variables to set the values instead of command line arguments.',
-        ]))
-
-    cliParserGroup.add_argument('-cli-P',
+    jasminParserGroup.add_argument('-P',
                                                  type=int,
                                                  dest='cli_port',
                                                  metavar='$port',
@@ -210,7 +198,7 @@ def startFromCLI():
                                                      ' '
                                                  ]))
 
-    cliParserGroup.add_argument('-cli-t',
+    jasminParserGroup.add_argument('-t',
                                                  type=int,
                                                  dest='cli_timeout',
                                                  metavar='$timeout',
@@ -224,7 +212,7 @@ def startFromCLI():
                                                      ' '
                                                  ]))
 
-    cliParserGroup.add_argument('-cli-standard-prompt',
+    jasminParserGroup.add_argument('-standard-prompt',
                                                  type=str,
                                                  dest='cli_standard_prompt',
                                                  metavar='$standard_prompt',
@@ -238,7 +226,7 @@ def startFromCLI():
                                                      ' '
                                                  ]))
 
-    cliParserGroup.add_argument('-cli-interactive-prompt',
+    jasminParserGroup.add_argument('-interactive-prompt',
                                                  type=str,
                                                  dest='cli_interactive_prompt',
                                                  metavar='$interactive_prompt',
@@ -252,7 +240,7 @@ def startFromCLI():
                                                      ' '
                                                  ]))
 
-    cliParserGroup.add_argument('-cli-auth',
+    jasminParserGroup.add_argument('-auth',
                                                  type=str2bool,
                                                  dest='cli_auth',
                                                  metavar='$is_auth',
@@ -267,7 +255,7 @@ def startFromCLI():
                                                      ' '
                                                  ]))
 
-    cliParserGroup.add_argument('-cli-u',
+    jasminParserGroup.add_argument('-u',
                                                  type=str,
                                                  dest='cli_username',
                                                  metavar='$username',
@@ -281,7 +269,7 @@ def startFromCLI():
                                                      ' '
                                                  ]))
 
-    cliParserGroup.add_argument('-cli-p',
+    jasminParserGroup.add_argument('-p',
                                                  type=str,
                                                  dest='cli_password',
                                                  metavar='$password',
@@ -294,57 +282,6 @@ def startFromCLI():
                                                      'The jasmin telnet cli password',
                                                      ' '
                                                  ]))
-    
-    if "jasmin" in [pkg.key for pkg in pkg_resources.working_set]:
-        pbParserGroup = parser.add_argument_group(
-            title='Jasmin Connection:-> Router PB Proxy',
-            description="\n".join([
-                'Jasmin Router PB Proxy Connection Configurations will be used in Router PB Proxy connection. You can use the environment variables to set the values instead of command line arguments.',
-            ]))
-
-        pbParserGroup.add_argument('-pb-P',
-                                                    type=int,
-                                                    dest='pb_port',
-                                                    metavar='$port',
-                                                    required=False,
-                                                    default=int(
-                                                        os.getenv("JASMIN_ROUTER_PB_PROXY_PORT", DEFAULT_ROUTER_PB_PROXY_PORT)),
-                                                    help="\n".join([
-                                                        f'Jasmin ROUTER_PB_PROXY Port (Default: "%(default)s")',
-                                                        'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PORT',
-                                                        'The port of the jasmin server ROUTER_PB_PROXY',
-                                                        ' '
-                                                    ]))
-
-        pbParserGroup.add_argument('-pb-u',
-                                                    type=str,
-                                                    dest='cli_username',
-                                                    metavar='$username',
-                                                    required=False,
-                                                    default=os.getenv(
-                                                        "JASMIN_ROUTER_PB_PROXY_USERNAME", DEFAULT_ROUTER_PB_PROXY_USERNAME),
-                                                    help="\n".join([
-                                                        f'Jasmin ROUTER_PB_PROXY Username (Default: "%(default)s")',
-                                                        'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_USERNAME',
-                                                        'The jasmin telnet ROUTER_PB_PROXY username',
-                                                        ' '
-                                                    ]))
-
-        pbParserGroup.add_argument('-pb-p',
-                                                    type=str,
-                                                    dest='cli_password',
-                                                    metavar='$password',
-                                                    required=False,
-                                                    default=os.getenv(
-                                                        "JASMIN_ROUTER_PB_PROXY_PASSWORD", DEFAULT_ROUTER_PB_PROXY_PASSWORD),
-                                                    help="\n".join([
-                                                        f'Jasmin ROUTER_PB_PROXY Password (Default: "%(default)s")',
-                                                        'Alternatively: You can use environment variable JASMIN_ROUTER_PB_PROXY_PASSWORD',
-                                                        'The jasmin telnet ROUTER_PB_PROXY password',
-                                                        ' '
-                                                    ]))
-
-
 
     loggingConfigsParserGroup = parser.add_argument_group(
         title='Logging',
