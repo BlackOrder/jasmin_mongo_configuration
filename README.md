@@ -12,6 +12,7 @@ Links [Jasmin SMS Gateway](https://github.com/jookies/jasmin)'s configuration to
 3. **[Usage Instructions](#usage-instructions)**
     + **[Data Structure](#data-structure)**
     + **[Start the Service](#start-the-service)**
+    + **[Billing Management](#billing-management)**
 
 ## Installation Instructions
 
@@ -35,7 +36,7 @@ pip3 install .
 docker compose -f ./docker/docker-compose.yml up -d
 ```
 
-Be sure to change the `JASMIN_HOST` and `MONGO_HOST` in the `docker-compose.yml` file to your desired values. and also finish the setup of the MongoDB cluster and import all of your configurations into a MongoDB database before running the docker-compose file.
+Be sure to change the `JASMIN_CLI_HOST` and `MONGO_HOST` in the `docker-compose.yml` file to your desired values. and also finish the setup of the MongoDB cluster and import all of your configurations into a MongoDB database before running the docker-compose file.
 
 ## Setup MongoDB CLuster
 
@@ -81,11 +82,11 @@ Each collection should contains your desired `jasmin`'s settings in a key value 
     "mt_messaging_cred authorization src_addr": "True",
     "mt_messaging_cred authorization validity_period": "True",
     "mt_messaging_cred defaultvalue src_addr": "None",
-    "mt_messaging_cred quota balance": 4000,
+    "mt_messaging_cred quota balance": "None",
     "mt_messaging_cred quota early_percent": "None",
     "mt_messaging_cred quota http_throughput": "None",
     "mt_messaging_cred quota smpps_throughput": "None",
-    "mt_messaging_cred quota sms_count": "None",
+    "mt_messaging_cred quota sms_count": 4000,
     "mt_messaging_cred valuefilter content": ".*",
     "mt_messaging_cred valuefilter dst_addr": ".*",
     "mt_messaging_cred valuefilter priority": "^[0-3]$",
@@ -125,7 +126,7 @@ There is multiple ways to setup the package from CLI.
     you can export the fallowing variables before execution
 
     ```env
-    JASMIN_JASMIN_HOST                         =       **REQUIRED:NoDefault**
+    JASMIN_CLI_HOST                         =       **REQUIRED:NoDefault**
     JASMIN_CLI_PORT                         =               8990
     JASMIN_CLI_TIMEOUT                      =                30
     JASMIN_CLI_AUTH                         =                yes
@@ -148,11 +149,32 @@ There is multiple ways to setup the package from CLI.
 2. you can pass arguments to the package on execution. execute ` jasminmongoconfd -h ` to see all possible arguments. Then execute:
 
     ```bash
-    jasminmongoconfd --cli-host $JASMIN_JASMIN_HOST --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
+    jasminmongoconfd --cli-host $JASMIN_CLI_HOST --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
     ```
 
 3. Mix the previous two methods. you can set the ENV variables and pass some arguments. for example:
 
     ```bash
-    JASMIN_JASMIN_HOST=127.0.0.1 jasminmongoconfd --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
+    JASMIN_CLI_HOST=127.0.0.1 jasminmongoconfd --connection-string $MONGO_CONNECTION_STRING --configuration-database $MONGO_CONFIGURATION_DATABASE
     ```
+
+### Billing Management
+
+Billing managment if enabled it will disable `jasmin` internal billing. The user's `mt_messaging_cred quota balance` and `mt_messaging_cred quota sms_count` keys in their documents will be ignored by the sync configuration and a value of `None` will always be passed to `jasmin` for both.
+The package provides a MT and a MO interceptor blueprints that could be installed for the users to be billed. The interceptors will accept ENV variables or you can change them to a static values. You can use these or write your own interceptors.
+
+You can get the MO and MT interceptors from the `jasminmongoconfd` package. The interceptors are located in the `jasminmongoconfd/interceptors` directory or you can get them from the `jasminmongoconfd` package installed in your system. Example:
+
+```bash
+jasminmongoconfd -get-interceptor mo > /tmp/mo.py
+jasminmongoconfd -get-interceptor mt > /tmp/mt.py
+```
+
+You will have to make sure the `jasmin` instance have access to the interceptors files. You can use `scp` to copy the files to the `jasmin` instance. Example:
+
+```bash
+scp /tmp/mo.py jasmin:/tmp/mo.py
+scp /tmp/mt.py jasmin:/tmp/mt.py
+```
+
+Then add the interceptors to you configuration collection.
